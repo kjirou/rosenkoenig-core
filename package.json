@@ -9,7 +9,7 @@
     "develop": "ts-node src/index.ts",
     "prettier:check": "prettier --check .",
     "prettier:write": "prettier --write .",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
