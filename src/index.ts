@@ -41,11 +41,16 @@ type Tile = {
   occupation: PlayerIndex | undefined;
 };
 
+type TileGrid = Tile[][];
+
+/** [x, y] */
+type TileGridPosition = [number, number];
+
 type Board = {
   /**
    * 9x9 grid of tiles, [0][0] is the top left corner of the board
    */
-  tileGrid: Tile[][];
+  tileGrid: TileGrid;
 };
 
 /** Same interface as `Math.random` */
@@ -53,8 +58,7 @@ type GetRandom = () => number;
 
 type Game = {
   board: Board;
-  /** [x, y] */
-  crownPosition: [number, number];
+  crownPosition: TileGridPosition;
   getRandom: GetRandom;
   players: Players;
   powerCardDeck: PowerCardDeck;
@@ -94,7 +98,7 @@ const AllNumberOfSteps = [1, 2, 3] as const satisfies readonly NumberOfSteps[];
 
 const MAX_TILE_GRID_SIZE = 9;
 
-const createTileGrid = (): Tile[][] => {
+export const createTileGrid = (): Tile[][] => {
   const tileGrid: Tile[][] = [];
   for (let i = 0; i < MAX_TILE_GRID_SIZE; i++) {
     const row: Tile[] = [];
@@ -140,6 +144,85 @@ const createPlayer = (): Player => {
   };
 };
 
+export const isTileGridPositionValid = (
+  tileGrid: TileGrid,
+  position: [number, number]
+): boolean => {
+  const [x, y] = position;
+  return (
+    x >= 0 &&
+    x < tileGrid.length &&
+    y >= 0 &&
+    y < tileGrid.length &&
+    tileGrid[x][y] !== undefined
+  );
+};
+
+const getTile = (tileGrid: TileGrid, position: TileGridPosition): Tile => {
+  const [x, y] = position;
+  if (!isTileGridPositionValid(tileGrid, [x, y])) {
+    throw new Error("Invalid tile grid position");
+  }
+  return tileGrid[x][y];
+};
+
+export const translateTileGridPositionByPowerCard = (
+  tileGridPosition: TileGridPosition,
+  powerCard: PowerCard
+): TileGridPosition => {
+  const [x, y] = tileGridPosition;
+  const { direction, numberOfSteps } = powerCard;
+  switch (direction) {
+    case "up":
+      return [x, y - numberOfSteps];
+    case "down":
+      return [x, y + numberOfSteps];
+    case "left":
+      return [x - numberOfSteps, y];
+    case "right":
+      return [x + numberOfSteps, y];
+    case "up-left":
+      return [x - numberOfSteps, y - numberOfSteps];
+    case "up-right":
+      return [x + numberOfSteps, y - numberOfSteps];
+    case "down-left":
+      return [x - numberOfSteps, y + numberOfSteps];
+    case "down-right":
+      return [x + numberOfSteps, y + numberOfSteps];
+  }
+};
+
+export const canCrownBeMovedToTile = ({
+  crownPosition,
+  hasKnightCard,
+  playerIndex,
+  powerCard,
+  tileGrid,
+}: {
+  crownPosition: TileGridPosition;
+  hasKnightCard: boolean;
+  playerIndex: PlayerIndex;
+  powerCard: PowerCard;
+  tileGrid: TileGrid;
+}): { canBeMoved: boolean; isKnightCardNecessary: boolean } => {
+  const nextCrownPosition = translateTileGridPositionByPowerCard(
+    crownPosition,
+    powerCard
+  );
+  if (!isTileGridPositionValid(tileGrid, nextCrownPosition)) {
+    return { canBeMoved: false, isKnightCardNecessary: false };
+  }
+  const nextCrownTile = getTile(tileGrid, nextCrownPosition);
+  return {
+    canBeMoved:
+      nextCrownTile.occupation === undefined ||
+      (nextCrownTile.occupation !== playerIndex && hasKnightCard),
+    isKnightCardNecessary:
+      nextCrownTile.occupation !== undefined &&
+      nextCrownTile.occupation !== playerIndex,
+  };
+};
+
 const initializeGame = (getRandom: GetRandom): Game => {
   const powerCardDeck = shuffleArray(createPowerCardDeck(), getRandom);
   const { deck: powerCardDeckDrawn5, drawn: powerCardHandForPlayer0 } =
@@ -178,4 +261,4 @@ const main = () => {
   console.log(require("util").inspect(game, { depth: null }));
 };
 
-main();
+//main();
