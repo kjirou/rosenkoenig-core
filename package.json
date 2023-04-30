@@ -1,6 +1,6 @@
 {
   "name": "rosenkoenig-core",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Core engine of the board game Rosenkönig",
   "main": "index.js",
   "scripts": {
@@ -12,9 +12,10 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "SEE LICENSE IN https://github.com/kjirou/rosenkoenig-core/blob/2db49ffd85ffce582fdb1889f43ec77d2b3636c7/LICENSE",
   "bugs": {
     "url": "https://github.com/kjirou/rosenkoenig-core/issues"
   },
-  "homepage": "https://github.com/kjirou/rosenkoenig-core#readme"
+  "homepage": "https://github.com/kjirou/rosenkoenig-core#readme",
+  "private": true
 }
