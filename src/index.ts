@@ -1,41 +1,31 @@
+import deepEqual from "deep-equal";
+
 type Direction =
   | "up"
   | "down"
   | "left"
   | "right"
-  | "up-left"
-  | "up-right"
-  | "down-left"
-  | "down-right";
+  | "upLeft"
+  | "upRight"
+  | "downLeft"
+  | "downRight";
 
 type NumberOfSteps = 1 | 2 | 3;
 
-type PowerCard = {
+export type PowerCard = {
   direction: Direction;
   numberOfSteps: NumberOfSteps;
 };
 
-type PowerCardHand =
-  | []
-  | [PowerCard]
-  | [PowerCard, PowerCard]
-  | [PowerCard, PowerCard, PowerCard]
-  | [PowerCard, PowerCard, PowerCard, PowerCard]
-  | [PowerCard, PowerCard, PowerCard, PowerCard, PowerCard];
-
-type NumberOfKnightCards = 0 | 1 | 2 | 3 | 4;
-
 type Player = {
-  numberOfKnightCards: NumberOfKnightCards;
-  powerCardHand: PowerCardHand;
+  numberOfKnightCards: number;
+  powerCardHand: PowerCard[];
 };
 
 type Players = [Player, Player];
 
 /** 0 is the front position relative to the board */
 type PlayerIndex = 0 | 1;
-
-type PowerCardDeck = PowerCard[];
 
 type Tile = {
   occupation: PlayerIndex | undefined;
@@ -46,22 +36,51 @@ type TileGrid = Tile[][];
 /** [x, y] */
 type TileGridPosition = [number, number];
 
+// TODO: tileGrid 範囲内の位置を型で表現してみる？
+
 type Board = {
+  crownPosition: TileGridPosition;
   /**
    * 9x9 grid of tiles, [0][0] is the top left corner of the board
    */
   tileGrid: TileGrid;
 };
 
+type PlayerAction =
+  | {
+      kind: "drawCard";
+    }
+  | {
+      kind: "moveCrown";
+      powerCard: PowerCard;
+    }
+  | {
+      kind: "pass";
+    };
+
+/**
+ * State of the game immediately after the start or after the player has finished his/her actions
+ */
+export type Game = {
+  board: Board;
+  /**
+   * e.g. undefined -> 0 -> 1 -> 0 -> ... or undefined -> 1 -> 0 -> 1 -> ...
+   */
+  currentPlayerIndex: PlayerIndex | undefined;
+  discardPile: PowerCard[];
+  drawPile: PowerCard[];
+  players: Players;
+};
+
 /** Same interface as `Math.random` */
 type GetRandom = () => number;
 
-type Game = {
-  board: Board;
-  crownPosition: TileGridPosition;
+type GameHistoryRecord = Omit<Game, "getRandom">;
+
+type GamePlay = {
+  game: Game;
   getRandom: GetRandom;
-  players: Players;
-  powerCardDeck: PowerCardDeck;
+  history: GameHistoryRecord[];
 };
 
 /**
@@ -83,15 +102,17 @@ export const shuffleArray = <Element>(
   return copied;
 };
 
+const MAX_NUMBER_OF_POWER_CARDS = 5;
+
 const AllDirections = [
   "up",
   "down",
   "left",
   "right",
-  "up-left",
-  "up-right",
-  "down-left",
-  "down-right",
+  "upLeft",
+  "upRight",
+  "downLeft",
+  "downRight",
 ] as const satisfies readonly Direction[];
 
 const AllNumberOfSteps = [1, 2, 3] as const satisfies readonly NumberOfSteps[];
@@ -110,31 +131,27 @@ export const createTileGrid = (): Tile[][] => {
   return tileGrid;
 };
 
-const createPowerCardDeck = (): PowerCardDeck => {
-  const powerCardDeck: PowerCardDeck = [];
+export const createPowerCardDeck = (): PowerCard[] => {
+  const drawPile: PowerCard[] = [];
   for (const numberOfSteps of AllNumberOfSteps) {
     for (const direction of AllDirections) {
-      powerCardDeck.push({ direction, numberOfSteps });
+      drawPile.push({ direction, numberOfSteps });
     }
   }
-  return powerCardDeck;
+  return drawPile;
 };
 
 const drawPowerCards = (
-  powerCardDeck: PowerCardDeck,
+  drawPile: PowerCard[],
   numberOfCardsDrawn: number
-): { deck: PowerCardDeck; drawn: PowerCard[] } => {
-  if (powerCardDeck.length < numberOfCardsDrawn) {
+): { drawPile: PowerCard[]; drawn: PowerCard[] } => {
+  if (drawPile.length < numberOfCardsDrawn) {
     throw new Error("Not enough cards in the deck");
   }
   return {
-    deck: powerCardDeck.slice(numberOfCardsDrawn),
-    drawn: powerCardDeck.slice(0, numberOfCardsDrawn),
+    drawPile: drawPile.slice(numberOfCardsDrawn),
+    drawn: drawPile.slice(0, numberOfCardsDrawn),
   };
-};
-
-const isPowerCardHandType = (value: PowerCard[]): value is PowerCardHand => {
-  return value.length <= 5;
 };
 
 const createPlayer = (): Player => {
@@ -142,6 +159,10 @@ const createPlayer = (): Player => {
     numberOfKnightCards: 4,
     powerCardHand: [],
   };
+};
+
+export const togglePlayerIndex = (playerIndex: PlayerIndex): PlayerIndex => {
+  return playerIndex === 0 ? 1 : 0;
 };
 
 export const isTileGridPositionValid = (
@@ -158,12 +179,21 @@ export const isTileGridPositionValid = (
   );
 };
 
-const getTile = (tileGrid: TileGrid, position: TileGridPosition): Tile => {
-  const [x, y] = position;
-  if (!isTileGridPositionValid(tileGrid, [x, y])) {
+export const getTile = (
+  tileGrid: TileGrid,
+  position: TileGridPosition
+): Tile => {
+  if (!isTileGridPositionValid(tileGrid, position)) {
     throw new Error("Invalid tile grid position");
   }
-  return tileGrid[x][y];
+  return tileGrid[position[1]][position[0]];
+};
+
+const isKnightCardNecessaryForMovingTile = (
+  tile: Tile,
+  movingPlayerIndex: PlayerIndex
+): boolean => {
+  return tile.occupation !== undefined && tile.occupation !== movingPlayerIndex;
 };
 
 export const translateTileGridPositionByPowerCard = (
@@ -181,13 +211,13 @@ export const translateTileGridPositionByPowerCard = (
       return [x - numberOfSteps, y];
     case "right":
       return [x + numberOfSteps, y];
-    case "up-left":
+    case "upLeft":
       return [x - numberOfSteps, y - numberOfSteps];
-    case "up-right":
+    case "upRight":
       return [x + numberOfSteps, y - numberOfSteps];
-    case "down-left":
+    case "downLeft":
       return [x - numberOfSteps, y + numberOfSteps];
-    case "down-right":
+    case "downRight":
       return [x + numberOfSteps, y + numberOfSteps];
   }
 };
@@ -217,24 +247,48 @@ export const canCrownBeMovedToTile = ({
     canBeMoved:
       nextCrownTile.occupation === undefined ||
       (nextCrownTile.occupation !== playerIndex && hasKnightCard),
-    isKnightCardNecessary:
-      nextCrownTile.occupation !== undefined &&
-      nextCrownTile.occupation !== playerIndex,
+    isKnightCardNecessary: isKnightCardNecessaryForMovingTile(
+      nextCrownTile,
+      playerIndex
+    ),
   };
 };
 
-const initializeGame = (getRandom: GetRandom): Game => {
-  const powerCardDeck = shuffleArray(createPowerCardDeck(), getRandom);
-  const { deck: powerCardDeckDrawn5, drawn: powerCardHandForPlayer0 } =
-    drawPowerCards(powerCardDeck, 5);
-  const { deck: powerCardDeckDrawn10, drawn: powerCardHandForPlayer1 } =
-    drawPowerCards(powerCardDeckDrawn5, 5);
-  if (
-    !isPowerCardHandType(powerCardHandForPlayer0) ||
-    !isPowerCardHandType(powerCardHandForPlayer1)
-  ) {
-    throw new Error("Invalid power card hand");
+export const computeSelectablePlayerActions = ({
+  board,
+  player,
+  playerIndex,
+}: {
+  board: Board;
+  player: Player;
+  playerIndex: PlayerIndex;
+}): PlayerAction[] => {
+  const playerActions: PlayerAction[] = player.powerCardHand
+    .filter(
+      (powerCard) =>
+        canCrownBeMovedToTile({
+          crownPosition: board.crownPosition,
+          hasKnightCard: player.numberOfKnightCards > 0,
+          playerIndex,
+          powerCard,
+          tileGrid: board.tileGrid,
+        }).canBeMoved
+    )
+    .map((powerCard) => ({ kind: "moveCrown", powerCard }));
+  if (player.powerCardHand.length < MAX_NUMBER_OF_POWER_CARDS) {
+    playerActions.push({ kind: "drawCard" });
   }
+  if (playerActions.length === 0) {
+    playerActions.push({ kind: "pass" });
+  }
+  return playerActions;
+};
+
+export const createGame = (shuffledDeck: PowerCard[]): Game => {
+  const { drawPile: drawPile5Drawn, drawn: powerCardHandForPlayer0 } =
+    drawPowerCards(shuffledDeck, 5);
+  const { drawPile: drawPile10Drawn, drawn: powerCardHandForPlayer1 } =
+    drawPowerCards(drawPile5Drawn, 5);
   const players: Players = [
     {
       ...createPlayer(),
@@ -246,18 +300,131 @@ const initializeGame = (getRandom: GetRandom): Game => {
     },
   ];
   return {
-    getRandom,
     board: {
+      crownPosition: [4, 4],
       tileGrid: createTileGrid(),
     },
-    crownPosition: [4, 4],
-    powerCardDeck,
+    drawPile: drawPile10Drawn,
+    discardPile: [],
     players,
+    currentPlayerIndex: undefined,
   };
 };
 
+/**
+ * @param shuffledDiscardPile Only used when draw pile is empty.
+ */
+export const resolvePlayerAction = (
+  game: Game,
+  currentPlayerIndex: PlayerIndex,
+  playerAction: PlayerAction,
+  shuffledDiscardPile: PowerCard[]
+): Game => {
+  // Check if the player action is selectable
+  const selecablePlayerActions = computeSelectablePlayerActions({
+    board: game.board,
+    player: game.players[currentPlayerIndex],
+    playerIndex: currentPlayerIndex,
+  });
+  if (!selecablePlayerActions.some((e) => deepEqual(e, playerAction))) {
+    throw new Error("It is an unselectable player action");
+  }
+
+  let newGame: Game = { ...game, currentPlayerIndex };
+  if (playerAction.kind === "drawCard") {
+    // Exchange the draw pile and the shuffled discard pile if the draw pile is empty
+    if (newGame.drawPile.length === 0) {
+      newGame = {
+        ...newGame,
+        drawPile: shuffledDiscardPile,
+        discardPile: [],
+      };
+    }
+
+    // Draw a power card
+    const { drawPile, drawn } = drawPowerCards(newGame.drawPile, 1);
+    const newPlayers = [...newGame.players];
+    newPlayers[currentPlayerIndex] = {
+      ...newPlayers[currentPlayerIndex],
+      powerCardHand: [
+        ...newPlayers[currentPlayerIndex].powerCardHand,
+        ...drawn,
+      ],
+    };
+    newGame = {
+      ...newGame,
+      players: [newPlayers[0], newPlayers[1]],
+      drawPile: drawPile,
+    };
+  } else if (playerAction.kind === "moveCrown") {
+    const newCrownPosition = translateTileGridPositionByPowerCard(
+      newGame.board.crownPosition,
+      playerAction.powerCard
+    );
+    const newPlayers = [...newGame.players];
+
+    // Occupy the tile
+    let isKnightCardNecessary = false;
+    const newTileGrid = game.board.tileGrid.map((row, y) => {
+      return row.map((tile, x) => {
+        if (x === newCrownPosition[0] && y === newCrownPosition[1]) {
+          isKnightCardNecessary = isKnightCardNecessaryForMovingTile(
+            tile,
+            currentPlayerIndex
+          );
+          return {
+            ...tile,
+            occupation: currentPlayerIndex,
+          };
+        }
+        return tile;
+      });
+    });
+
+    // Reduce current player's hand
+    newPlayers[currentPlayerIndex] = {
+      ...newPlayers[currentPlayerIndex],
+      powerCardHand: newPlayers[currentPlayerIndex].powerCardHand.filter(
+        (powerCard) => !deepEqual(powerCard, playerAction.powerCard)
+      ),
+    };
+
+    // Add discarded power card to discard pile
+    const newDiscardPile = [...newGame.discardPile, playerAction.powerCard];
+
+    // Reduce current player's knight card
+    if (isKnightCardNecessary) {
+      newPlayers[currentPlayerIndex] = {
+        ...newPlayers[currentPlayerIndex],
+        numberOfKnightCards:
+          newPlayers[currentPlayerIndex].numberOfKnightCards - 1,
+      };
+    }
+
+    newGame = {
+      ...newGame,
+      board: {
+        ...newGame.board,
+        crownPosition: newCrownPosition,
+        tileGrid: newTileGrid,
+      },
+      players: [newPlayers[0], newPlayers[1]],
+      discardPile: newDiscardPile,
+    };
+  }
+  return newGame;
+};
+
+// TODO: ゲーム終了判定
+
+// TODO: 履歴を追加しつつ、ゲームを進める
+
+// TODO: スコア算出用ユーティリティ群
+
 const main = () => {
-  const game = initializeGame(Math.random);
+  const getRandom = Math.random;
+  const deck = shuffleArray(createPowerCardDeck(), getRandom);
+  const game = createGame(deck);
   console.log(require("util").inspect(game, { depth: null }));
 };
 
