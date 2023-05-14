@@ -1,16 +1,99 @@
 import {
+  calculateScore,
   canCrownBeMovedToTile,
-  createPowerCardDeck,
   computeSelectablePlayerActions,
+  computeLastPlayerIndex,
+  computeNextPlayerIndex,
+  computeWinner,
+  createPowerCardDeck,
   createGame,
   createTileGrid,
+  drawPowerCards,
   getTile,
+  initialize,
   isTileGridPositionValid,
+  playTurn,
   resolvePlayerAction,
   togglePlayerIndex,
   translateTileGridPositionByPowerCard,
 } from "./index";
 import type { Game } from "./index";
+
+describe("createTileGrid", () => {
+  describe("options.initialOccupation", () => {
+    test.each<
+      [
+        string,
+        Parameters<typeof createTileGrid>,
+        ReturnType<typeof createTileGrid>
+      ]
+    >([
+      [
+        "all empty",
+        [
+          {
+            initialOccupation: [
+              "         ",
+              "         ",
+              "         ",
+              "         ",
+              "         ",
+              "         ",
+              "         ",
+              "         ",
+              "         ",
+            ].join("\n"),
+          },
+        ],
+        createTileGrid(),
+      ],
+      [
+        "all 0",
+        [
+          {
+            initialOccupation: [
+              "000000000",
+              "000000000",
+              "000000000",
+              "000000000",
+              "000000000",
+              "000000000",
+              "000000000",
+              "000000000",
+              "000000000",
+            ].join("\n"),
+          },
+        ],
+        createTileGrid().map((row) =>
+          row.map((tile) => ({ ...tile, occupation: 0 }))
+        ),
+      ],
+      [
+        "all 1",
+        [
+          {
+            initialOccupation: [
+              "111111111",
+              "111111111",
+              "111111111",
+              "111111111",
+              "111111111",
+              "111111111",
+              "111111111",
+              "111111111",
+              "111111111",
+            ].join("\n"),
+          },
+        ],
+        createTileGrid().map((row) =>
+          row.map((tile) => ({ ...tile, occupation: 1 }))
+        ),
+      ],
+    ])("%s", (_, args, expected) => {
+      expect(createTileGrid(...args)).toStrictEqual(expected);
+    });
+  });
+});
 
 describe("isTileGridPositionValid", () => {
   test.each<{
@@ -282,62 +365,6 @@ describe("resolvePlayerAction", () => {
   beforeEach(() => {
     game = createGame(createPowerCardDeck());
   });
-
-  test("it throws an error if the playerAction does not relate with the playerIndex", () => {
-    const playerIndex = 0;
-    game.players[playerIndex].powerCardHand = [
-      { direction: "up", numberOfSteps: 1 },
-    ];
-    expect(() => {
-      resolvePlayerAction(
-        game,
-        playerIndex,
-        {
-          kind: "moveCrown",
-          powerCard: { direction: "down", numberOfSteps: 1 },
-        },
-        []
-      );
-    }).toThrowError(/unselectable player action/);
-  });
-  test('it throws an error if the "drawCard" playerAction could not be use', () => {
-    const playerIndex = 0;
-    game.players[playerIndex].powerCardHand = [
-      { direction: "up", numberOfSteps: 1 },
-      { direction: "up", numberOfSteps: 2 },
-      { direction: "up", numberOfSteps: 3 },
-      { direction: "left", numberOfSteps: 1 },
-      { direction: "left", numberOfSteps: 2 },
-    ];
-    expect(() => {
-      resolvePlayerAction(
-        game,
-        playerIndex,
-        {
-          kind: "drawCard",
-        },
-        []
-      );
-    }).toThrowError(/unselectable player action/);
-  });
-  test('it throws an error if the "moveCrown" playerAction could not be use', () => {
-    const playerIndex = 0;
-    game.players[playerIndex].powerCardHand = [
-      { direction: "up", numberOfSteps: 1 },
-    ];
-    game.board.crownPosition = [0, 0];
-    expect(() => {
-      resolvePlayerAction(
-        game,
-        playerIndex,
-        {
-          kind: "moveCrown",
-          powerCard: { direction: "up", numberOfSteps: 1 },
-        },
-        []
-      );
-    }).toThrowError(/unselectable player action/);
-  });
   test("it can draw a power card from the draw pile", () => {
     const playerIndex = 0;
     game.players[playerIndex].powerCardHand = [];
@@ -448,5 +475,523 @@ describe("resolvePlayerAction", () => {
     expect(game.players[playerIndex].numberOfKnightCards).toBe(
       beforeNumberOfKnightCards
     );
+  });
+});
+
+describe("calculateScore", () => {
+  test.each<
+    [
+      string,
+      Parameters<typeof calculateScore>,
+      ReturnType<typeof calculateScore>
+    ]
+  >([
+    ["no occupition", [createTileGrid(), 0], { total: 0, occupiedAreas: [] }],
+    [
+      "one-tile only occupation",
+      [
+        (() => {
+          const tileGrid = createTileGrid();
+          getTile(tileGrid, [0, 1]).occupation = 0;
+          return tileGrid;
+        })(),
+        0,
+      ],
+      { total: 1, occupiedAreas: [[[0, 1]]] },
+    ],
+    [
+      "multiple contiguous occupied areas",
+      [
+        (() => {
+          const tileGrid = createTileGrid();
+          //  012345678
+          // 0xx    x
+          // 1     x
+          // 2
+          // 3   x
+          // 4    x
+          // 5     x  x
+          // 6        x
+          // 7        x
+          // 8        x
+          getTile(tileGrid, [0, 0]).occupation = 0;
+          getTile(tileGrid, [1, 0]).occupation = 0;
+          getTile(tileGrid, [6, 0]).occupation = 0;
+          getTile(tileGrid, [5, 1]).occupation = 0;
+          getTile(tileGrid, [3, 3]).occupation = 0;
+          getTile(tileGrid, [4, 4]).occupation = 0;
+          getTile(tileGrid, [5, 5]).occupation = 0;
+          getTile(tileGrid, [8, 5]).occupation = 0;
+          getTile(tileGrid, [8, 6]).occupation = 0;
+          getTile(tileGrid, [8, 7]).occupation = 0;
+          getTile(tileGrid, [8, 8]).occupation = 0;
+          return tileGrid;
+        })(),
+        0,
+      ],
+      {
+        // 4 + 4 + 9 + 16 = 33
+        total: 33,
+        occupiedAreas: [
+          [
+            [0, 0],
+            [1, 0],
+          ],
+          [
+            [6, 0],
+            [5, 1],
+          ],
+          [
+            [3, 3],
+            [4, 4],
+            [5, 5],
+          ],
+          [
+            [8, 5],
+            [8, 6],
+            [8, 7],
+            [8, 8],
+          ],
+        ],
+      },
+    ],
+    [
+      "two players' occupied areas are adjacent to each other",
+      [
+        (() => {
+          const tileGrid = createTileGrid();
+          getTile(tileGrid, [0, 0]).occupation = 0;
+          getTile(tileGrid, [0, 1]).occupation = 1;
+          getTile(tileGrid, [0, 2]).occupation = 1;
+          return tileGrid;
+        })(),
+        1,
+      ],
+      {
+        total: 4,
+        occupiedAreas: [
+          [
+            [0, 1],
+            [0, 2],
+          ],
+        ],
+      },
+    ],
+  ])("%s", (_, args, expected) => {
+    expect(calculateScore(...args)).toStrictEqual(expected);
+  });
+});
+
+describe("computeWinner", () => {
+  test.each<
+    [string, Parameters<typeof computeWinner>, ReturnType<typeof computeWinner>]
+  >([
+    [
+      'it judges as the game was finished if "pass" action is consecutive',
+      [{ kind: "pass" }, { kind: "pass" }, createTileGrid()],
+      "draw",
+    ],
+    [
+      'it judges as the game was not finished if "pass" action is not consecutive',
+      [{ kind: "pass" }, { kind: "drawCard" }, createTileGrid()],
+      undefined,
+    ],
+    [
+      "it judges as the game was finished if the number of occupied tiles is 52",
+      [
+        { kind: "drawCard" },
+        { kind: "drawCard" },
+        createTileGrid({
+          initialOccupation: [
+            "000000000",
+            "000000000",
+            "000000000",
+            "000000000",
+            "000000000",
+            "0000000  ",
+            "         ",
+            "         ",
+            "         ",
+          ].join("\n"),
+        }),
+      ],
+      0,
+    ],
+    [
+      "it judges as the game was not finished if the number of occupied tiles is 51",
+      [
+        { kind: "drawCard" },
+        { kind: "drawCard" },
+        createTileGrid({
+          initialOccupation: [
+            "000000000",
+            "000000000",
+            "000000000",
+            "000000000",
+            "000000000",
+            "000000   ",
+            "         ",
+            "         ",
+            "         ",
+          ].join("\n"),
+        }),
+      ],
+      undefined,
+    ],
+    [
+      "it can judge the the player 0 won",
+      [
+        { kind: "pass" },
+        { kind: "pass" },
+        (() => {
+          const tileGrid = createTileGrid();
+          tileGrid[0][0].occupation = 0;
+          return tileGrid;
+        })(),
+      ],
+      0,
+    ],
+    [
+      "it can judge that the player 1 won",
+      [
+        { kind: "pass" },
+        { kind: "pass" },
+        (() => {
+          const tileGrid = createTileGrid();
+          tileGrid[0][0].occupation = 1;
+          return tileGrid;
+        })(),
+      ],
+      1,
+    ],
+  ])("%s", (_, args, expected) => {
+    expect(computeWinner(...args)).toBe(expected);
+  });
+});
+
+describe("computeLastPlayerIndex", () => {
+  test.each<
+    [
+      string,
+      Parameters<typeof computeLastPlayerIndex>,
+      ReturnType<typeof computeLastPlayerIndex>
+    ]
+  >([
+    [
+      "it returns undefined right at the start of the game",
+      [initialize({ firstPlayerIndex: 0 })],
+      undefined,
+    ],
+    [
+      "it returns 0 if firstPlayerIndex is 0 and the number of history records is 2",
+      [
+        (() => {
+          const gamePlay = initialize({ firstPlayerIndex: 0 });
+          gamePlay.history.push({
+            game: gamePlay.game,
+            playerAction: undefined,
+            playerIndex: undefined,
+          });
+          return gamePlay;
+        })(),
+      ],
+      0,
+    ],
+    [
+      "it returns 1 if firstPlayerIndex is 1 and the number of history records is 2",
+      [
+        (() => {
+          const gamePlay = initialize({ firstPlayerIndex: 1 });
+          gamePlay.history.push({
+            game: gamePlay.game,
+            playerAction: undefined,
+            playerIndex: undefined,
+          });
+          return gamePlay;
+        })(),
+      ],
+      1,
+    ],
+    [
+      "it returns 1 if firstPlayerIndex is 0 and the number of history records is 3",
+      [
+        (() => {
+          const gamePlay = initialize({ firstPlayerIndex: 0 });
+          gamePlay.history.push({
+            game: gamePlay.game,
+            playerAction: undefined,
+            playerIndex: undefined,
+          });
+          gamePlay.history.push({
+            game: gamePlay.game,
+            playerAction: undefined,
+            playerIndex: undefined,
+          });
+          return gamePlay;
+        })(),
+      ],
+      1,
+    ],
+  ])("%s", (_, args, expected) => {
+    expect(computeLastPlayerIndex(...args)).toBe(expected);
+  });
+});
+
+describe("computeNextPlayerIndex", () => {
+  test.each<
+    [
+      string,
+      Parameters<typeof computeNextPlayerIndex>,
+      ReturnType<typeof computeNextPlayerIndex>
+    ]
+  >([
+    [
+      "it returns firstPlayerIndex right at the start of the game",
+      [initialize({ firstPlayerIndex: 1 })],
+      1,
+    ],
+    [
+      "it returns 0 if firstPlayerIndex is 1 and the number of history records is 2",
+      [
+        (() => {
+          const gamePlay = initialize({ firstPlayerIndex: 1 });
+          gamePlay.history.push({
+            game: gamePlay.game,
+            playerAction: undefined,
+            playerIndex: undefined,
+          });
+          return gamePlay;
+        })(),
+      ],
+      0,
+    ],
+  ])("%s", (_, args, expected) => {
+    expect(computeNextPlayerIndex(...args)).toBe(expected);
+  });
+});
+
+describe("playTurn", () => {
+  const createFixedCards = () => {
+    // U1, U2, U3, D1, D2, D3, L1, L2, L3, R1, R2, R3, UL1, UL2, UL3, UR1, UR2, UR3, ...
+    const drawPile = createPowerCardDeck();
+    const drawResult1 = drawPowerCards(drawPile, 5);
+    const drawResult2 = drawPowerCards(drawResult1.drawPile, 5);
+    return {
+      // R2, R3, UL1, UL2, UL3, UR1, UR2, UR3, ...
+      drawPile: drawResult2.drawPile,
+      hands: [
+        // U1, U2, U3, D1, D2
+        drawResult1.drawn,
+        // D3, L1, L2, L3, R1
+        drawResult2.drawn,
+      ],
+    };
+  };
+  test("it throws an error if the player take some action after the game was finished", () => {
+    const gamePlay = initialize();
+    gamePlay.winner = "draw";
+    expect(() => {
+      playTurn(gamePlay, {
+        kind: "pass",
+      });
+    }).toThrowError(/already finished/);
+  });
+  test("it throws an error if the playerAction does not relate with the playerIndex", () => {
+    const gamePlay = initialize();
+    gamePlay.game.players[gamePlay.firstPlayerIndex].powerCardHand = [
+      { direction: "up", numberOfSteps: 1 },
+    ];
+    expect(() => {
+      playTurn(gamePlay, {
+        kind: "moveCrown",
+        powerCard: { direction: "down", numberOfSteps: 1 },
+      });
+    }).toThrowError(/unselectable player action/);
+  });
+  test('it throws an error if the "drawCard" playerAction could not be use', () => {
+    const gamePlay = initialize();
+    gamePlay.game.players[gamePlay.firstPlayerIndex].powerCardHand = [
+      { direction: "up", numberOfSteps: 1 },
+      { direction: "up", numberOfSteps: 2 },
+      { direction: "up", numberOfSteps: 3 },
+      { direction: "left", numberOfSteps: 1 },
+      { direction: "left", numberOfSteps: 2 },
+    ];
+    expect(() => {
+      playTurn(gamePlay, {
+        kind: "drawCard",
+      });
+    }).toThrowError(/unselectable player action/);
+  });
+  test('it throws an error if the "moveCrown" playerAction could not be use', () => {
+    const gamePlay = initialize();
+    gamePlay.game.players[gamePlay.firstPlayerIndex].powerCardHand = [
+      { direction: "up", numberOfSteps: 1 },
+    ];
+    gamePlay.game.board.crownPosition = [0, 0];
+    expect(() => {
+      playTurn(gamePlay, {
+        kind: "moveCrown",
+        powerCard: { direction: "up", numberOfSteps: 1 },
+      });
+    }).toThrowError(/unselectable player action/);
+  });
+  test("it can simulate the early stages of the game", () => {
+    const cards = createFixedCards();
+    let gamePlay = initialize({ firstPlayerIndex: 0 });
+    gamePlay.game.drawPile = cards.drawPile;
+    gamePlay.game.players[0].powerCardHand = cards.hands[0];
+    gamePlay.game.players[1].powerCardHand = cards.hands[1];
+
+    // 1st turn by 0
+    //  012345678
+    // 0
+    // 1
+    // 2
+    // 3    0
+    // 4
+    // 5
+    // 6
+    // 7
+    // 8
+    gamePlay = playTurn(gamePlay, {
+      kind: "moveCrown",
+      powerCard: { direction: "up", numberOfSteps: 1 },
+    });
+    expect(gamePlay.game.board.tileGrid[3][4].occupation).toBe(0);
+    expect(gamePlay.game.players[0].powerCardHand).toHaveLength(4);
+
+    // 2nd turn by 1
+    //  012345678
+    // 0
+    // 1
+    // 2
+    // 3   10
+    // 4
+    // 5
+    // 6
+    // 7
+    // 8
+    gamePlay = playTurn(gamePlay, {
+      kind: "moveCrown",
+      powerCard: { direction: "left", numberOfSteps: 1 },
+    });
+    expect(gamePlay.game.board.tileGrid[3][3].occupation).toBe(1);
+    expect(gamePlay.game.players[1].powerCardHand).toHaveLength(4);
+
+    // 3rd turn by 0
+    //  012345678
+    // 0   0
+    // 1
+    // 2
+    // 3   10
+    // 4
+    // 5
+    // 6
+    // 7
+    // 8
+    gamePlay = playTurn(gamePlay, {
+      kind: "moveCrown",
+      powerCard: { direction: "up", numberOfSteps: 3 },
+    });
+    expect(gamePlay.game.board.tileGrid[0][3].occupation).toBe(0);
+    expect(gamePlay.game.players[0].powerCardHand).toHaveLength(3);
+
+    // 4th turn by 1
+    //  012345678
+    // 0   01
+    // 1
+    // 2
+    // 3   10
+    // 4
+    // 5
+    // 6
+    // 7
+    // 8
+    gamePlay = playTurn(gamePlay, {
+      kind: "moveCrown",
+      powerCard: { direction: "right", numberOfSteps: 1 },
+    });
+    expect(gamePlay.game.board.tileGrid[0][4].occupation).toBe(1);
+    expect(gamePlay.game.players[1].powerCardHand).toHaveLength(3);
+
+    // 5th turn by 0
+    gamePlay = playTurn(gamePlay, {
+      kind: "drawCard",
+    });
+    expect(gamePlay.game.players[0].powerCardHand).toHaveLength(4);
+
+    // 6th turn by 1
+    //  012345678
+    // 0   01
+    // 1
+    // 2
+    // 3   11
+    // 4
+    // 5
+    // 6
+    // 7
+    // 8
+    gamePlay = playTurn(gamePlay, {
+      kind: "moveCrown",
+      powerCard: { direction: "down", numberOfSteps: 3 },
+    });
+    expect(gamePlay.game.board.tileGrid[3][4].occupation).toBe(1);
+    expect(gamePlay.game.players[1].powerCardHand).toHaveLength(2);
+    expect(gamePlay.game.players[1].numberOfKnightCards).toBe(3);
+  });
+  test("it can simulate a situation where a game ends with a series of passes", () => {
+    let gamePlay = initialize({ firstPlayerIndex: 0 });
+    gamePlay.game.players[0].powerCardHand = [
+      { direction: "up", numberOfSteps: 1 },
+      { direction: "up", numberOfSteps: 2 },
+      { direction: "up", numberOfSteps: 3 },
+      { direction: "left", numberOfSteps: 1 },
+      { direction: "left", numberOfSteps: 2 },
+    ];
+    gamePlay.game.players[1].powerCardHand = [
+      { direction: "upLeft", numberOfSteps: 1 },
+      { direction: "upLeft", numberOfSteps: 2 },
+      { direction: "upLeft", numberOfSteps: 3 },
+      { direction: "upRight", numberOfSteps: 1 },
+      { direction: "upRight", numberOfSteps: 2 },
+    ];
+    gamePlay.game.board.crownPosition = [0, 0];
+    gamePlay = playTurn(gamePlay, { kind: "pass" });
+    gamePlay = playTurn(gamePlay, { kind: "pass" });
+    expect(gamePlay.winner).toBe("draw");
+  });
+  test("it can simulate a situation where the game is over because there are now 52 occupied tiles", () => {
+    let gamePlay = initialize({ firstPlayerIndex: 0 });
+    gamePlay.game.players[0].powerCardHand = [
+      { direction: "up", numberOfSteps: 1 },
+    ];
+    gamePlay.game.players[1].powerCardHand = [
+      { direction: "up", numberOfSteps: 2 },
+    ];
+    gamePlay.game.board.tileGrid = createTileGrid({
+      initialOccupation: [
+        "000000000",
+        "000000000",
+        "000000000",
+        "000000000",
+        "000000000",
+        "00000    ",
+        "         ",
+        "         ",
+        "         ",
+      ].join("\n"),
+    });
+    gamePlay.game.board.crownPosition = [8, 8];
+    gamePlay = playTurn(gamePlay, {
+      kind: "moveCrown",
+      powerCard: { direction: "up", numberOfSteps: 1 },
+    });
+    expect(gamePlay.winner).toBe(undefined);
+    gamePlay = playTurn(gamePlay, {
+      kind: "moveCrown",
+      powerCard: { direction: "up", numberOfSteps: 2 },
+    });
+    expect(gamePlay.winner).toBe(0);
   });
 });

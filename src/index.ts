@@ -1,6 +1,6 @@
 import deepEqual from "deep-equal";
 
-type Direction =
+export type Direction =
   | "up"
   | "down"
   | "left"
@@ -10,35 +10,36 @@ type Direction =
   | "downLeft"
   | "downRight";
 
-type NumberOfSteps = 1 | 2 | 3;
+export type NumberOfSteps = 1 | 2 | 3;
 
 export type PowerCard = {
   direction: Direction;
   numberOfSteps: NumberOfSteps;
 };
 
-type Player = {
+export type Player = {
   numberOfKnightCards: number;
   powerCardHand: PowerCard[];
 };
 
-type Players = [Player, Player];
-
 /** 0 is the front position relative to the board */
-type PlayerIndex = 0 | 1;
+export type PlayerIndex = 0 | 1;
 
-type Tile = {
+/** This array indexes are linked to PlayerIndex */
+export type Players = [Player, Player];
+
+export type Tile = {
   occupation: PlayerIndex | undefined;
 };
 
-type TileGrid = Tile[][];
+export type TileGrid = Tile[][];
 
 /** [x, y] */
-type TileGridPosition = [number, number];
+export type TileGridPosition = [number, number];
 
 // TODO: tileGrid 範囲内の位置を型で表現してみる？
 
-type Board = {
+export type Board = {
   crownPosition: TileGridPosition;
   /**
    * 9x9 grid of tiles, [0][0] is the top left corner of the board
@@ -46,7 +47,7 @@ type Board = {
   tileGrid: TileGrid;
 };
 
-type PlayerAction =
+export type PlayerAction =
   | {
       kind: "drawCard";
     }
@@ -63,24 +64,31 @@ type PlayerAction =
  */
 export type Game = {
   board: Board;
-  /**
-   * e.g. undefined -> 0 -> 1 -> 0 -> ... or undefined -> 1 -> 0 -> 1 -> ...
-   */
-  currentPlayerIndex: PlayerIndex | undefined;
   discardPile: PowerCard[];
   drawPile: PowerCard[];
   players: Players;
 };
 
-/** Same interface as `Math.random` */
-type GetRandom = () => number;
+export type Score = {
+  /** Each element is a set of adjacent tiles */
+  occupiedAreas: TileGridPosition[][];
+  total: number;
+};
 
-type GameHistoryRecord = Omit<Game, "getRandom">;
-
-type GamePlay = {
+export type GamePlay = {
+  firstPlayerIndex: PlayerIndex;
   game: Game;
-  getRandom: GetRandom;
-  history: GameHistoryRecord[];
+  /** Same interface as `Math.random` */
+  getRandom: () => number;
+  history: {
+    game: Game;
+    playerAction: PlayerAction | undefined;
+    /**
+     * e.g. undefined -> 1st player -> 2nd player -> 1st player -> ...
+     */
+    playerIndex: PlayerIndex | undefined;
+  }[];
+  winner: PlayerIndex | "draw" | undefined;
 };
 
 /**
@@ -102,8 +110,7 @@ export const shuffleArray = <Element>(
   return copied;
 };
 
-const MAX_NUMBER_OF_POWER_CARDS = 5;
-
+/** The test code depends on this order. */
 const AllDirections = [
   "up",
   "down",
@@ -115,33 +122,21 @@ const AllDirections = [
   "downRight",
 ] as const satisfies readonly Direction[];
 
+/** The test code depends on this order. */
 const AllNumberOfSteps = [1, 2, 3] as const satisfies readonly NumberOfSteps[];
 
-const MAX_TILE_GRID_SIZE = 9;
-
-export const createTileGrid = (): Tile[][] => {
-  const tileGrid: Tile[][] = [];
-  for (let i = 0; i < MAX_TILE_GRID_SIZE; i++) {
-    const row: Tile[] = [];
-    for (let j = 0; j < MAX_TILE_GRID_SIZE; j++) {
-      row.push({ occupation: undefined });
-    }
-    tileGrid.push(row);
-  }
-  return tileGrid;
-};
-
+/** The test code depends on this order. */
 export const createPowerCardDeck = (): PowerCard[] => {
   const drawPile: PowerCard[] = [];
-  for (const numberOfSteps of AllNumberOfSteps) {
-    for (const direction of AllDirections) {
+  for (const direction of AllDirections) {
+    for (const numberOfSteps of AllNumberOfSteps) {
       drawPile.push({ direction, numberOfSteps });
     }
   }
   return drawPile;
 };
 
-const drawPowerCards = (
+export const drawPowerCards = (
   drawPile: PowerCard[],
   numberOfCardsDrawn: number
 ): { drawPile: PowerCard[]; drawn: PowerCard[] } => {
@@ -152,6 +147,56 @@ const drawPowerCards = (
     drawPile: drawPile.slice(numberOfCardsDrawn),
     drawn: drawPile.slice(0, numberOfCardsDrawn),
   };
+};
+
+const MAX_TILE_GRID_SIZE = 9;
+
+const createTileGridWithOccupation = (occupitionQuery: string): TileGrid => {
+  const lines = occupitionQuery.split("\n");
+  if (lines.length !== 9) throw new Error("invalid query");
+  const tileGrid = createTileGrid();
+  for (const [y, row] of tileGrid.entries()) {
+    const line = lines[y];
+    const characters = line.split("");
+    if (characters.length !== 9) throw new Error("invalid a line of query");
+    for (const [x, tile] of row.entries()) {
+      const character = characters[x];
+      tile.occupation =
+        character === "0" ? 0 : character === "1" ? 1 : undefined;
+    }
+  }
+  return tileGrid;
+};
+
+export const createTileGrid = (
+  options: { initialOccupation?: string } = {}
+): TileGrid => {
+  const initialOccupation = options.initialOccupation || undefined;
+
+  const tileGrid: TileGrid = [];
+  for (let i = 0; i < MAX_TILE_GRID_SIZE; i++) {
+    const row: Tile[] = [];
+    for (let j = 0; j < MAX_TILE_GRID_SIZE; j++) {
+      row.push({ occupation: undefined });
+    }
+    tileGrid.push(row);
+  }
+
+  if (initialOccupation !== undefined) {
+    const lines = initialOccupation.split("\n");
+    if (lines.length !== 9) throw new Error("invalid initialOccupation option");
+    for (const [y, row] of tileGrid.entries()) {
+      const line = lines[y];
+      const characters = line.split("");
+      for (const [x, tile] of row.entries()) {
+        const character = characters[x];
+        tile.occupation =
+          character === "0" ? 0 : character === "1" ? 1 : undefined;
+      }
+    }
+  }
+
+  return tileGrid;
 };
 
 const createPlayer = (): Player => {
@@ -254,6 +299,8 @@ export const canCrownBeMovedToTile = ({
   };
 };
 
+const MAX_NUMBER_OF_POWER_CARDS = 5;
+
 export const computeSelectablePlayerActions = ({
   board,
   player,
@@ -307,7 +354,6 @@ export const createGame = (shuffledDeck: PowerCard[]): Game => {
     drawPile: drawPile10Drawn,
     discardPile: [],
     players,
-    currentPlayerIndex: undefined,
   };
 };
 
@@ -320,17 +366,7 @@ export const resolvePlayerAction = (
   playerAction: PlayerAction,
   shuffledDiscardPile: PowerCard[]
 ): Game => {
-  // Check if the player action is selectable
-  const selecablePlayerActions = computeSelectablePlayerActions({
-    board: game.board,
-    player: game.players[currentPlayerIndex],
-    playerIndex: currentPlayerIndex,
-  });
-  if (!selecablePlayerActions.some((e) => deepEqual(e, playerAction))) {
-    throw new Error("It is an unselectable player action");
-  }
-
-  let newGame: Game = { ...game, currentPlayerIndex };
+  let newGame: Game = { ...game };
   if (playerAction.kind === "drawCard") {
     // Exchange the draw pile and the shuffled discard pile if the draw pile is empty
     if (newGame.drawPile.length === 0) {
@@ -415,17 +451,179 @@ export const resolvePlayerAction = (
   return newGame;
 };
 
-// TODO: ゲーム終了判定
+export const initialize = (
+  options: {
+    firstPlayerIndex?: PlayerIndex;
+    getRandom?: GamePlay["getRandom"];
+  } = {}
+): GamePlay => {
+  const getRandom = options.getRandom ? options.getRandom : Math.random;
+  const firstPlayerIndex =
+    options.firstPlayerIndex !== undefined
+      ? options.firstPlayerIndex
+      : getRandom() < 0.5
+      ? 0
+      : 1;
 
-// TODO: 履歴を追加しつつ、ゲームを進める
-
-// TODO: スコア算出用ユーティリティ群
-
-const main = () => {
-  const getRandom = Math.random;
   const deck = shuffleArray(createPowerCardDeck(), getRandom);
   const game = createGame(deck);
-  console.log(require("util").inspect(game, { depth: null }));
+
+  return {
+    firstPlayerIndex,
+    game,
+    getRandom,
+    history: [
+      {
+        game,
+        playerIndex: undefined,
+        playerAction: undefined,
+      },
+    ],
+    winner: undefined,
+  };
 };
 
-//main();
+export const computeLastPlayerIndex = (
+  gamePlay: GamePlay
+): PlayerIndex | undefined => {
+  return gamePlay.history.length === 1
+    ? undefined
+    : gamePlay.history.length % 2 === 0
+    ? gamePlay.firstPlayerIndex
+    : togglePlayerIndex(gamePlay.firstPlayerIndex);
+};
+
+export const computeNextPlayerIndex = (gamePlay: GamePlay): PlayerIndex => {
+  const previousPlayerIndex = computeLastPlayerIndex(gamePlay);
+  return previousPlayerIndex === undefined
+    ? gamePlay.firstPlayerIndex
+    : togglePlayerIndex(previousPlayerIndex);
+};
+
+const countNumberOfOccupiedTiles = (tileGrid: TileGrid): number => {
+  return tileGrid.reduce(
+    (acc, row) =>
+      acc +
+      row.reduce(
+        (acc2, tile) => acc2 + (tile.occupation === undefined ? 0 : 1),
+        0
+      ),
+    0
+  );
+};
+
+const areTilesAdjacent = (
+  a: TileGridPosition,
+  b: TileGridPosition
+): boolean => {
+  return (
+    Math.abs(a[0] - b[0]) <= 1 &&
+    Math.abs(a[1] - b[1]) <= 1 &&
+    !(a[0] === b[0] && a[1] === b[1])
+  );
+};
+
+export const calculateScore = (
+  tileGrid: TileGrid,
+  playerIndex: PlayerIndex
+): Score => {
+  const occupiedAreas: Score["occupiedAreas"] = [];
+  for (const [y, row] of tileGrid.entries()) {
+    for (const [x, tile] of row.entries()) {
+      if (tile.occupation === playerIndex) {
+        let areExistingAreasAjacent = false;
+        for (const occupiedArea of occupiedAreas) {
+          for (const occupiedTilePosition of occupiedArea) {
+            if (areTilesAdjacent(occupiedTilePosition, [x, y])) {
+              occupiedArea.push([x, y]);
+              areExistingAreasAjacent = true;
+              break;
+            }
+          }
+          if (areExistingAreasAjacent) {
+            break;
+          }
+        }
+        if (!areExistingAreasAjacent) {
+          occupiedAreas.push([[x, y]]);
+        }
+      }
+    }
+  }
+  return {
+    occupiedAreas,
+    total: occupiedAreas.reduce(
+      (acc, area) => acc + Math.pow(area.length, 2),
+      0
+    ),
+  };
+};
+
+const MAX_NUMBER_OF_OCCUPIED_TILES = 52;
+
+export const computeWinner = (
+  playerAction: PlayerAction,
+  previousPlayerAction: GamePlay["history"][number]["playerAction"],
+  tileGrid: TileGrid
+): GamePlay["winner"] => {
+  return (playerAction.kind === "pass" &&
+    previousPlayerAction?.kind === "pass") ||
+    countNumberOfOccupiedTiles(tileGrid) >= MAX_NUMBER_OF_OCCUPIED_TILES
+    ? (() => {
+        const score0 = calculateScore(tileGrid, 0);
+        const score1 = calculateScore(tileGrid, 1);
+        if (score0.total > score1.total) {
+          return 0;
+        } else if (score0.total < score1.total) {
+          return 1;
+        }
+        return "draw";
+      })()
+    : undefined;
+};
+
+export const playTurn = (
+  gamePlay: GamePlay,
+  playerAction: PlayerAction
+): GamePlay => {
+  if (gamePlay.winner !== undefined) {
+    throw new Error("The game has been already finished");
+  }
+
+  const currentPlayerIndex = computeNextPlayerIndex(gamePlay);
+
+  // Check if the player action is selectable
+  const selecablePlayerActions = computeSelectablePlayerActions({
+    board: gamePlay.game.board,
+    player: gamePlay.game.players[currentPlayerIndex],
+    playerIndex: currentPlayerIndex,
+  });
+  if (!selecablePlayerActions.some((e) => deepEqual(e, playerAction))) {
+    throw new Error("It is an unselectable player action");
+  }
+
+  const newGame = resolvePlayerAction(
+    gamePlay.game,
+    currentPlayerIndex,
+    playerAction,
+    shuffleArray(gamePlay.game.discardPile, gamePlay.getRandom)
+  );
+
+  const newHistory: GamePlay["history"] = [
+    ...gamePlay.history,
+    ...[{ game: newGame, playerIndex: currentPlayerIndex, playerAction }],
+  ];
+
+  const newWinner = computeWinner(
+    playerAction,
+    newHistory[newHistory.length - 2].playerAction,
+    newGame.board.tileGrid
+  );
+
+  return {
+    ...gamePlay,
+    game: newGame,
+    history: newHistory,
+    winner: newWinner,
+  };
+};

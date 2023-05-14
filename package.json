@@ -5,12 +5,12 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --project tsconfig.build.json",
     "develop": "ts-node src/index.ts",
     "prettier:check": "prettier --check .",
     "prettier:write": "prettier --write .",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc"
   },
   "repository": {
     "type": "git",
