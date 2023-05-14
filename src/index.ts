@@ -1,5 +1,3 @@
-import deepEqual from "deep-equal";
-
 export type Direction =
   | "up"
   | "down"
@@ -36,8 +34,6 @@ export type TileGrid = Tile[][];
 
 /** [x, y] */
 export type TileGridPosition = [number, number];
-
-// TODO: tileGrid 範囲内の位置を型で表現してみる？
 
 export type Board = {
   crownPosition: TileGridPosition;
@@ -110,7 +106,6 @@ export const shuffleArray = <Element>(
   return copied;
 };
 
-/** The test code depends on this order. */
 const AllDirections = [
   "up",
   "down",
@@ -122,10 +117,8 @@ const AllDirections = [
   "downRight",
 ] as const satisfies readonly Direction[];
 
-/** The test code depends on this order. */
 const AllNumberOfSteps = [1, 2, 3] as const satisfies readonly NumberOfSteps[];
 
-/** The test code depends on this order. */
 export const createPowerCardDeck = (): PowerCard[] => {
   const drawPile: PowerCard[] = [];
   for (const direction of AllDirections) {
@@ -147,6 +140,26 @@ export const drawPowerCards = (
     drawPile: drawPile.slice(numberOfCardsDrawn),
     drawn: drawPile.slice(0, numberOfCardsDrawn),
   };
+};
+
+export const arePowerCardsEqual = (a: PowerCard, b: PowerCard): boolean => {
+  return a.direction === b.direction && a.numberOfSteps === b.numberOfSteps;
+};
+
+export const arePlayerActionsEqual = (
+  a: PlayerAction,
+  b: PlayerAction
+): boolean => {
+  switch (a.kind) {
+    case "drawCard":
+      return b.kind === "drawCard";
+    case "moveCrown":
+      return (
+        b.kind === "moveCrown" && arePowerCardsEqual(a.powerCard, b.powerCard)
+      );
+    case "pass":
+      return b.kind === "pass";
+  }
 };
 
 const MAX_TILE_GRID_SIZE = 9;
@@ -421,7 +434,7 @@ export const resolvePlayerAction = (
     newPlayers[currentPlayerIndex] = {
       ...newPlayers[currentPlayerIndex],
       powerCardHand: newPlayers[currentPlayerIndex].powerCardHand.filter(
-        (powerCard) => !deepEqual(powerCard, playerAction.powerCard)
+        (powerCard) => !arePowerCardsEqual(powerCard, playerAction.powerCard)
       ),
     };
 
@@ -598,7 +611,9 @@ export const playTurn = (
     player: gamePlay.game.players[currentPlayerIndex],
     playerIndex: currentPlayerIndex,
   });
-  if (!selecablePlayerActions.some((e) => deepEqual(e, playerAction))) {
+  if (
+    !selecablePlayerActions.some((e) => arePlayerActionsEqual(e, playerAction))
+  ) {
     throw new Error("It is an unselectable player action");
   }
 
