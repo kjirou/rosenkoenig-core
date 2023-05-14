@@ -832,22 +832,6 @@ describe("computeNextPlayerIndex", () => {
 });
 
 describe("playTurn", () => {
-  const createFixedCards = () => {
-    // U1, U2, U3, D1, D2, D3, L1, L2, L3, R1, R2, R3, UL1, UL2, UL3, UR1, UR2, UR3, ...
-    const drawPile = createPowerCardDeck();
-    const drawResult1 = drawPowerCards(drawPile, 5);
-    const drawResult2 = drawPowerCards(drawResult1.drawPile, 5);
-    return {
-      // R2, R3, UL1, UL2, UL3, UR1, UR2, UR3, ...
-      drawPile: drawResult2.drawPile,
-      hands: [
-        // U1, U2, U3, D1, D2
-        drawResult1.drawn,
-        // D3, L1, L2, L3, R1
-        drawResult2.drawn,
-      ],
-    };
-  };
   test("it throws an error if the player take some action after the game was finished", () => {
     const gamePlay = initialize();
     gamePlay.winner = "draw";
@@ -898,11 +882,51 @@ describe("playTurn", () => {
     }).toThrowError(/unselectable player action/);
   });
   test("it can simulate the early stages of the game", () => {
-    const cards = createFixedCards();
     let gamePlay = initialize({ firstPlayerIndex: 0 });
-    gamePlay.game.drawPile = cards.drawPile;
-    gamePlay.game.players[0].powerCardHand = cards.hands[0];
-    gamePlay.game.players[1].powerCardHand = cards.hands[1];
+    gamePlay.game.players[0].powerCardHand = [
+      {
+        direction: "up",
+        numberOfSteps: 1,
+      },
+      {
+        direction: "up",
+        numberOfSteps: 2,
+      },
+      {
+        direction: "up",
+        numberOfSteps: 3,
+      },
+      {
+        direction: "down",
+        numberOfSteps: 1,
+      },
+      {
+        direction: "down",
+        numberOfSteps: 2,
+      },
+    ];
+    gamePlay.game.players[1].powerCardHand = [
+      {
+        direction: "down",
+        numberOfSteps: 3,
+      },
+      {
+        direction: "left",
+        numberOfSteps: 1,
+      },
+      {
+        direction: "left",
+        numberOfSteps: 2,
+      },
+      {
+        direction: "left",
+        numberOfSteps: 3,
+      },
+      {
+        direction: "right",
+        numberOfSteps: 1,
+      },
+    ];
 
     // 1st turn by 0
     //  012345678
