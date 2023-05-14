@@ -1,5 +1,3 @@
-import deepEqual from "deep-equal";
-
 export type Direction =
   | "up"
   | "down"
@@ -147,6 +145,26 @@ export const drawPowerCards = (
     drawPile: drawPile.slice(numberOfCardsDrawn),
     drawn: drawPile.slice(0, numberOfCardsDrawn),
   };
+};
+
+export const arePowerCardsEqual = (a: PowerCard, b: PowerCard): boolean => {
+  return a.direction === b.direction && a.numberOfSteps === b.numberOfSteps;
+};
+
+export const arePlayerActionsEqual = (
+  a: PlayerAction,
+  b: PlayerAction
+): boolean => {
+  switch (a.kind) {
+    case "drawCard":
+      return b.kind === "drawCard";
+    case "moveCrown":
+      return (
+        b.kind === "moveCrown" && arePowerCardsEqual(a.powerCard, b.powerCard)
+      );
+    case "pass":
+      return b.kind === "pass";
+  }
 };
 
 const MAX_TILE_GRID_SIZE = 9;
@@ -421,7 +439,7 @@ export const resolvePlayerAction = (
     newPlayers[currentPlayerIndex] = {
       ...newPlayers[currentPlayerIndex],
       powerCardHand: newPlayers[currentPlayerIndex].powerCardHand.filter(
-        (powerCard) => !deepEqual(powerCard, playerAction.powerCard)
+        (powerCard) => !arePowerCardsEqual(powerCard, playerAction.powerCard)
       ),
     };
 
@@ -598,7 +616,9 @@ export const playTurn = (
     player: gamePlay.game.players[currentPlayerIndex],
     playerIndex: currentPlayerIndex,
   });
-  if (!selecablePlayerActions.some((e) => deepEqual(e, playerAction))) {
+  if (
+    !selecablePlayerActions.some((e) => arePlayerActionsEqual(e, playerAction))
+  ) {
     throw new Error("It is an unselectable player action");
   }
 
