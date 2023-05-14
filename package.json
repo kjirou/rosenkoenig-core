@@ -6,9 +6,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
+    "build-into-pages": "npm run build && cp dist/index.js docs/rosenkoenig-core.js",
     "develop": "ts-node src/index.ts",
     "prettier:check": "prettier --check .",
     "prettier:write": "prettier --write .",
+    "serve-pages": "serve ./docs",
     "test": "jest",
     "typecheck": "tsc"
   },
