@@ -106,7 +106,6 @@ export const shuffleArray = <Element>(
   return copied;
 };
 
-/** The test code depends on this order. */
 const AllDirections = [
   "up",
   "down",
@@ -118,10 +117,8 @@ const AllDirections = [
   "downRight",
 ] as const satisfies readonly Direction[];
 
-/** The test code depends on this order. */
 const AllNumberOfSteps = [1, 2, 3] as const satisfies readonly NumberOfSteps[];
 
-/** The test code depends on this order. */
 export const createPowerCardDeck = (): PowerCard[] => {
   const drawPile: PowerCard[] = [];
   for (const direction of AllDirections) {
