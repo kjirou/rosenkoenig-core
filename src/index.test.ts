@@ -1,4 +1,6 @@
 import {
+  arePlayerActionsEqual,
+  arePowerCardsEqual,
   calculateScore,
   canCrownBeMovedToTile,
   computeSelectablePlayerActions,
@@ -17,7 +19,66 @@ import {
   togglePlayerIndex,
   translateTileGridPositionByPowerCard,
 } from "./index";
-import type { Game } from "./index";
+import type { Game, PlayerAction, PowerCard } from "./index";
+
+describe("arePowerCardsEqual", () => {
+  test.each<{ args: [PowerCard, PowerCard]; expected: boolean }>([
+    {
+      args: [
+        { direction: "up", numberOfSteps: 1 },
+        { direction: "up", numberOfSteps: 1 },
+      ],
+      expected: true,
+    },
+    {
+      args: [
+        { direction: "up", numberOfSteps: 1 },
+        { direction: "up", numberOfSteps: 2 },
+      ],
+      expected: false,
+    },
+    {
+      args: [
+        { direction: "up", numberOfSteps: 1 },
+        { direction: "left", numberOfSteps: 1 },
+      ],
+      expected: false,
+    },
+  ])("$args.0, $args.1 => $expected", ({ args, expected }) => {
+    expect(arePowerCardsEqual(...args)).toBe(expected);
+  });
+});
+
+describe("arePlayerActionsEqual", () => {
+  test.each<{ args: [PlayerAction, PlayerAction]; expected: boolean }>([
+    { args: [{ kind: "drawCard" }, { kind: "drawCard" }], expected: true },
+    { args: [{ kind: "pass" }, { kind: "pass" }], expected: true },
+    { args: [{ kind: "drawCard" }, { kind: "pass" }], expected: false },
+    {
+      args: [
+        { kind: "moveCrown", powerCard: { direction: "up", numberOfSteps: 1 } },
+        { kind: "moveCrown", powerCard: { direction: "up", numberOfSteps: 1 } },
+      ],
+      expected: true,
+    },
+    {
+      args: [
+        { kind: "moveCrown", powerCard: { direction: "up", numberOfSteps: 1 } },
+        { kind: "moveCrown", powerCard: { direction: "up", numberOfSteps: 2 } },
+      ],
+      expected: false,
+    },
+    {
+      args: [
+        { kind: "moveCrown", powerCard: { direction: "up", numberOfSteps: 1 } },
+        { kind: "drawCard" },
+      ],
+      expected: false,
+    },
+  ])("$args.0, $args.1 => $expected", ({ args, expected }) => {
+    expect(arePlayerActionsEqual(...args)).toBe(expected);
+  });
+});
 
 describe("createTileGrid", () => {
   describe("options.initialOccupation", () => {
