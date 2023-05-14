@@ -35,8 +35,6 @@ export type TileGrid = Tile[][];
 /** [x, y] */
 export type TileGridPosition = [number, number];
 
-// TODO: tileGrid 範囲内の位置を型で表現してみる？
-
 export type Board = {
   crownPosition: TileGridPosition;
   /**
