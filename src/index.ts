@@ -513,7 +513,7 @@ export const computeNextPlayerIndex = (gamePlay: GamePlay): PlayerIndex => {
     : togglePlayerIndex(previousPlayerIndex);
 };
 
-const countNumberOfOccupiedTiles = (tileGrid: TileGrid): number => {
+export const countNumberOfOccupiedTiles = (tileGrid: TileGrid): number => {
   return tileGrid.reduce(
     (acc, row) =>
       acc +
@@ -557,20 +557,19 @@ export const calculateScore = (
     rest: TileGridPosition[];
   }): { connected: TileGridPosition[]; rest: TileGridPosition[] } => {
     if (connected.length === 0) {
-      throw new Error("positions must not be empty");
+      throw new Error("connected positions must not be empty");
     }
-    let newConnected = connected.slice();
-    let newRest = rest.slice();
     for (const a of connected) {
       for (const b of rest) {
         if (areTilesAdjacent(a, b)) {
-          newConnected.push(b);
-          newRest = rest.filter((p) => p !== b);
-          return findConnectedArea({ connected: newConnected, rest: newRest });
+          return findConnectedArea({
+            connected: [...connected, b],
+            rest: rest.filter((p) => p !== b),
+          });
         }
       }
     }
-    return { connected: newConnected, rest: newRest };
+    return { connected, rest };
   };
 
   let restPositions = allPositions;
