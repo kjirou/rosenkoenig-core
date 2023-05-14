@@ -513,7 +513,7 @@ export const computeNextPlayerIndex = (gamePlay: GamePlay): PlayerIndex => {
     : togglePlayerIndex(previousPlayerIndex);
 };
 
-const countNumberOfOccupiedTiles = (tileGrid: TileGrid): number => {
+export const countNumberOfOccupiedTiles = (tileGrid: TileGrid): number => {
   return tileGrid.reduce(
     (acc, row) =>
       acc +
