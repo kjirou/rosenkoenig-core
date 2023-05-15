@@ -13,7 +13,7 @@ export const shuffleArray = (array, getRandom) => {
     }
     return copied;
 };
-const AllDirections = [
+export const AllDirections = [
     "up",
     "down",
     "left",
@@ -23,7 +23,9 @@ const AllDirections = [
     "downLeft",
     "downRight",
 ];
-const AllNumberOfSteps = [1, 2, 3];
+export const AllNumberOfSteps = [
+    1, 2, 3,
+];
 export const createPowerCardDeck = () => {
     const drawPile = [];
     for (const direction of AllDirections) {
@@ -55,25 +57,7 @@ export const arePlayerActionsEqual = (a, b) => {
             return b.kind === "pass";
     }
 };
-const MAX_TILE_GRID_SIZE = 9;
-const createTileGridWithOccupation = (occupitionQuery) => {
-    const lines = occupitionQuery.split("\n");
-    if (lines.length !== 9)
-        throw new Error("invalid query");
-    const tileGrid = createTileGrid();
-    for (const [y, row] of tileGrid.entries()) {
-        const line = lines[y];
-        const characters = line.split("");
-        if (characters.length !== 9)
-            throw new Error("invalid a line of query");
-        for (const [x, tile] of row.entries()) {
-            const character = characters[x];
-            tile.occupation =
-                character === "0" ? 0 : character === "1" ? 1 : undefined;
-        }
-    }
-    return tileGrid;
-};
+export const MAX_TILE_GRID_SIZE = 9;
 export const createTileGrid = (options = {}) => {
     const initialOccupation = options.initialOccupation || undefined;
     const tileGrid = [];
@@ -100,7 +84,7 @@ export const createTileGrid = (options = {}) => {
     }
     return tileGrid;
 };
-const createPlayer = () => {
+export const createPlayer = () => {
     return {
         numberOfKnightCards: 4,
         powerCardHand: [],
@@ -151,16 +135,13 @@ export const translateTileGridPositionByPowerCard = (tileGridPosition, powerCard
 export const canCrownBeMovedToTile = ({ crownPosition, hasKnightCard, playerIndex, powerCard, tileGrid, }) => {
     const nextCrownPosition = translateTileGridPositionByPowerCard(crownPosition, powerCard);
     if (!isTileGridPositionValid(tileGrid, nextCrownPosition)) {
-        return { canBeMoved: false, isKnightCardNecessary: false };
+        return false;
     }
     const nextCrownTile = getTile(tileGrid, nextCrownPosition);
-    return {
-        canBeMoved: nextCrownTile.occupation === undefined ||
-            (nextCrownTile.occupation !== playerIndex && hasKnightCard),
-        isKnightCardNecessary: isKnightCardNecessaryForMovingTile(nextCrownTile, playerIndex),
-    };
+    return (nextCrownTile.occupation === undefined ||
+        (nextCrownTile.occupation !== playerIndex && hasKnightCard));
 };
-const MAX_NUMBER_OF_POWER_CARDS = 5;
+export const MAX_NUMBER_OF_POWER_CARDS = 5;
 export const computeSelectablePlayerActions = ({ board, player, playerIndex, }) => {
     const playerActions = player.powerCardHand
         .filter((powerCard) => canCrownBeMovedToTile({
@@ -169,7 +150,7 @@ export const computeSelectablePlayerActions = ({ board, player, playerIndex, }) 
         playerIndex,
         powerCard,
         tileGrid: board.tileGrid,
-    }).canBeMoved)
+    }))
         .map((powerCard) => ({ kind: "moveCrown", powerCard }));
     if (player.powerCardHand.length < MAX_NUMBER_OF_POWER_CARDS) {
         playerActions.push({ kind: "drawCard" });
@@ -386,7 +367,7 @@ export const calculateScore = (tileGrid, playerIndex) => {
         total: occupiedAreas.reduce((acc, area) => acc + Math.pow(area.length, 2), 0),
     };
 };
-const MAX_NUMBER_OF_OCCUPIED_TILES = 52;
+export const MAX_NUMBER_OF_OCCUPIED_TILES = 52;
 export const computeWinner = (playerAction, previousPlayerAction, tileGrid) => {
     return (playerAction.kind === "pass" &&
         previousPlayerAction?.kind === "pass") ||
