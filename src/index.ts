@@ -275,24 +275,19 @@ export const canCrownBeMovedToTile = ({
   playerIndex: PlayerIndex;
   powerCard: PowerCard;
   tileGrid: TileGrid;
-}): { canBeMoved: boolean; isKnightCardNecessary: boolean } => {
+}): boolean => {
   const nextCrownPosition = translateTileGridPositionByPowerCard(
     crownPosition,
     powerCard
   );
   if (!isTileGridPositionValid(tileGrid, nextCrownPosition)) {
-    return { canBeMoved: false, isKnightCardNecessary: false };
+    return false;
   }
   const nextCrownTile = getTile(tileGrid, nextCrownPosition);
-  return {
-    canBeMoved:
-      nextCrownTile.occupation === undefined ||
-      (nextCrownTile.occupation !== playerIndex && hasKnightCard),
-    isKnightCardNecessary: isKnightCardNecessaryForMovingTile(
-      nextCrownTile,
-      playerIndex
-    ),
-  };
+  return (
+    nextCrownTile.occupation === undefined ||
+    (nextCrownTile.occupation !== playerIndex && hasKnightCard)
+  );
 };
 
 const MAX_NUMBER_OF_POWER_CARDS = 5;
@@ -307,15 +302,14 @@ export const computeSelectablePlayerActions = ({
   playerIndex: PlayerIndex;
 }): PlayerAction[] => {
   const playerActions: PlayerAction[] = player.powerCardHand
-    .filter(
-      (powerCard) =>
-        canCrownBeMovedToTile({
-          crownPosition: board.crownPosition,
-          hasKnightCard: player.numberOfKnightCards > 0,
-          playerIndex,
-          powerCard,
-          tileGrid: board.tileGrid,
-        }).canBeMoved
+    .filter((powerCard) =>
+      canCrownBeMovedToTile({
+        crownPosition: board.crownPosition,
+        hasKnightCard: player.numberOfKnightCards > 0,
+        playerIndex,
+        powerCard,
+        tileGrid: board.tileGrid,
+      })
     )
     .map((powerCard) => ({ kind: "moveCrown", powerCard }));
   if (player.powerCardHand.length < MAX_NUMBER_OF_POWER_CARDS) {

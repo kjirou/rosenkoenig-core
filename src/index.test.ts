@@ -235,7 +235,7 @@ describe("canCrownBeMovedToTile", () => {
           tileGrid: createTileGrid(),
         },
       ],
-      { canBeMoved: false, isKnightCardNecessary: false },
+      false,
     ],
     [
       "the crown can move when the tile is empty",
@@ -251,7 +251,7 @@ describe("canCrownBeMovedToTile", () => {
           tileGrid: createTileGrid(),
         },
       ],
-      { canBeMoved: true, isKnightCardNecessary: false },
+      true,
     ],
     [
       "the crown can not move when the tile is occupied by the same player",
@@ -271,7 +271,7 @@ describe("canCrownBeMovedToTile", () => {
           })(),
         },
       ],
-      { canBeMoved: false, isKnightCardNecessary: false },
+      false,
     ],
     [
       "the crown can not move when the tile is occupied by the another player and the player does not have a knight card",
@@ -291,7 +291,7 @@ describe("canCrownBeMovedToTile", () => {
           })(),
         },
       ],
-      { canBeMoved: false, isKnightCardNecessary: true },
+      false,
     ],
     [
       "the crown can move when the tile is occupied by the another player and the player has a knight card",
@@ -311,7 +311,7 @@ describe("canCrownBeMovedToTile", () => {
           })(),
         },
       ],
-      { canBeMoved: true, isKnightCardNecessary: true },
+      true,
     ],
   ])("%s", (_, args, expected) => {
     expect(canCrownBeMovedToTile(...args)).toStrictEqual(expected);
