@@ -18,8 +18,8 @@ import {
   resolvePlayerAction,
   togglePlayerIndex,
   translateTileGridPositionByPowerCard,
-} from "./index";
-import type { Game, PlayerAction, PowerCard } from "./index";
+} from "./index.js";
+import type { Game, PlayerAction, PowerCard } from "./index.js";
 
 describe("arePowerCardsEqual", () => {
   test.each<{ args: [PowerCard, PowerCard]; expected: boolean }>([
