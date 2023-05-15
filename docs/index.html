@@ -1,9 +1,336 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Hello GitHub Pages</title>
+    <title>rosenkoenig-core demo</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      main {
+        margin-left: auto;
+        margin-right: auto;
+        /* 48px * 9 + 2px(border) */
+        width: 434px;
+      }
+      #board {
+        box-sizing: border-box;
+        border: 1px solid black;
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(9, 1fr);
+        grid-auto-rows: 48px;
+      }
+      .tile {
+        box-sizing: border-box;
+        border: 1px solid black;
+        text-align: center;
+        font-size: 2em;
+        font-weight: bold;
+      }
+      #player1,
+      #player0 {
+        padding: 8px;
+      }
+      .hand {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        column-gap: 8px;
+        grid-auto-rows: 96px;
+        font-size: 0.8em;
+      }
+      .powerCard {
+        box-sizing: border-box;
+        border: 1px solid black;
+        border-radius: 4px;
+      }
+    </style>
+    <script type="module">
+      import {
+        arePlayerActionsEqual,
+        calculateScore,
+        computeNextPlayerIndex,
+        countNumberOfOccupiedTiles,
+        computeSelectablePlayerActions,
+        initialize,
+        playTurn,
+      } from "./rosenkoenig-core.js?v=0.0.0";
+
+      const alertWinner = (gamePlay) => {
+        if (gamePlay.winner === 0 || gamePlay.winner === 1) {
+          window.alert(`Player ${gamePlay.winner} won!`);
+        } else if (gamePlay.winner === "draw") {
+          window.alert("Draw!");
+        }
+      };
+
+      const renderPlayerElement = (gamePlay, playerIndex, reRender) => {
+        const game = gamePlay.game;
+        const player = game.players[playerIndex];
+        const playerHtmlId = `player${playerIndex}`;
+        const playerElement = document.querySelector(`#${playerHtmlId}`);
+        const playerHandElement = playerElement.querySelector(".hand");
+        const statusBarElement = playerElement.querySelector(".statusBar");
+        const selectablePlayerActions = computeSelectablePlayerActions({
+          board: game.board,
+          player,
+          playerIndex,
+        });
+        const nextPlayerIndex = computeNextPlayerIndex(gamePlay);
+        const isActivePlayer = playerIndex === nextPlayerIndex;
+
+        if (isActivePlayer) {
+          playerElement.style.opacity = 1;
+        } else {
+          playerElement.style.opacity = 0.5;
+        }
+
+        for (let i = 0; i < 5; i++) {
+          const powerCardElement = playerHandElement.querySelector(
+            `[data-power-card-index="${i}"]`
+          );
+          const powerCard = player.powerCardHand[i];
+          if (powerCard) {
+            powerCardElement.style.display = "block";
+            powerCardElement.innerHTML = `${powerCard.direction}<br>${powerCard.numberOfSteps}`;
+            const moveCrownAction = {
+              kind: "moveCrown",
+              powerCard,
+            };
+            if (
+              selectablePlayerActions.some((e) =>
+                arePlayerActionsEqual(e, moveCrownAction)
+              )
+            ) {
+              powerCardElement.style.backgroundColor = "yellow";
+              if (isActivePlayer) {
+                powerCardElement.style.cursor = "pointer";
+                powerCardElement.onclick = () => {
+                  const newGamePlay = playTurn(gamePlay, moveCrownAction);
+                  reRender(newGamePlay);
+                  alertWinner(newGamePlay);
+                };
+              } else {
+                powerCardElement.style.cursor = "auto";
+                powerCardElement.onclick = null;
+              }
+            } else {
+              powerCardElement.style.backgroundColor = "";
+              powerCardElement.style.cursor = "auto";
+              powerCardElement.onclick = null;
+            }
+          } else if (
+            selectablePlayerActions.some((e) =>
+              arePlayerActionsEqual(e, { kind: "drawCard" })
+            )
+          ) {
+            powerCardElement.style.display = "block";
+            powerCardElement.textContent = "+Draw";
+            powerCardElement.style.backgroundColor = "pink";
+            if (isActivePlayer) {
+              powerCardElement.style.cursor = "pointer";
+              powerCardElement.onclick = () => {
+                const newGamePlay = playTurn(gamePlay, {
+                  kind: "drawCard",
+                });
+                reRender(newGamePlay);
+              };
+            } else {
+              powerCardElement.style.cursor = "auto";
+              powerCardElement.onclick = null;
+            }
+          } else {
+            powerCardElement.style.display = "none";
+            powerCardElement.style.backgroundColor = "";
+            powerCardElement.style.cursor = "auto";
+            powerCardElement.onclick = null;
+          }
+        }
+
+        const score = calculateScore(game.board.tileGrid, playerIndex);
+        const needToPass = selectablePlayerActions.some((e) =>
+          arePlayerActionsEqual(e, { kind: "pass" })
+        );
+        const statusItems = [
+          `Knight cards: ${player.numberOfKnightCards}`,
+          `Score: ${score.total}`,
+          ...(needToPass ? ["CLICK TO PASS!"] : []),
+        ];
+        statusBarElement.textContent = statusItems.join(" | ");
+        statusBarElement.style.backgroundColor =
+          playerIndex === 0 ? "red" : "aqua";
+        if (needToPass && isActivePlayer) {
+          statusBarElement.style.cursor = "pointer";
+          statusBarElement.onclick = () => {
+            const newGamePlay = playTurn(gamePlay, { kind: "pass" });
+            reRender(newGamePlay);
+            alertWinner(newGamePlay);
+          };
+        } else {
+          statusBarElement.style.cursor = "auto";
+          statusBarElement.onclick = null;
+        }
+      };
+
+      const renderBoardElement = (game) => {
+        const boardElement = document.querySelector("#board");
+
+        for (const [y, row] of game.board.tileGrid.entries()) {
+          for (const [x, tile] of row.entries()) {
+            const tileElement = boardElement.querySelector(
+              `[data-x="${x}"][data-y="${y}"]`
+            );
+            tileElement.style.backgroundColor =
+              tile.occupation === 0
+                ? "red"
+                : tile.occupation === 1
+                ? "aqua"
+                : "";
+            if (
+              x === game.board.crownPosition[0] &&
+              y === game.board.crownPosition[1]
+            ) {
+              tileElement.textContent = "C";
+            } else {
+              tileElement.textContent = "";
+            }
+          }
+        }
+      };
+
+      const renderGlobalStatusBarElement = (game) => {
+        const globalStatusBarElement =
+          document.querySelector("#globalStatusBar");
+
+        const numberOfOccupiedTiles = countNumberOfOccupiedTiles(
+          game.board.tileGrid
+        );
+        const statusItems = [
+          `Remaining pieces: ${52 - numberOfOccupiedTiles}/52`,
+        ];
+        globalStatusBarElement.textContent = statusItems.join(" | ");
+      };
+
+      const render = (gamePlay) => {
+        renderBoardElement(gamePlay.game);
+        renderPlayerElement(gamePlay, 0, render);
+        renderPlayerElement(gamePlay, 1, render);
+        renderGlobalStatusBarElement(gamePlay.game);
+      };
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const gamePlay = initialize({ firstPlayerIndex: 0 });
+        render(gamePlay);
+      });
+    </script>
   </head>
   <body>
-    <p>Heelo GitHub Pages!</p>
+    <main>
+      <div id="player1">
+        <div class="hand">
+          <div data-power-card-index="0" class="powerCard"></div>
+          <div data-power-card-index="1" class="powerCard"></div>
+          <div data-power-card-index="2" class="powerCard"></div>
+          <div data-power-card-index="3" class="powerCard"></div>
+          <div data-power-card-index="4" class="powerCard"></div>
+        </div>
+        <div class="statusBar"></div>
+      </div>
+      <div id="board">
+        <div data-x="0" data-y="0" class="tile"></div>
+        <div data-x="1" data-y="0" class="tile"></div>
+        <div data-x="2" data-y="0" class="tile"></div>
+        <div data-x="3" data-y="0" class="tile"></div>
+        <div data-x="4" data-y="0" class="tile"></div>
+        <div data-x="5" data-y="0" class="tile"></div>
+        <div data-x="6" data-y="0" class="tile"></div>
+        <div data-x="7" data-y="0" class="tile"></div>
+        <div data-x="8" data-y="0" class="tile"></div>
+        <div data-x="0" data-y="1" class="tile"></div>
+        <div data-x="1" data-y="1" class="tile"></div>
+        <div data-x="2" data-y="1" class="tile"></div>
+        <div data-x="3" data-y="1" class="tile"></div>
+        <div data-x="4" data-y="1" class="tile"></div>
+        <div data-x="5" data-y="1" class="tile"></div>
+        <div data-x="6" data-y="1" class="tile"></div>
+        <div data-x="7" data-y="1" class="tile"></div>
+        <div data-x="8" data-y="1" class="tile"></div>
+        <div data-x="0" data-y="2" class="tile"></div>
+        <div data-x="1" data-y="2" class="tile"></div>
+        <div data-x="2" data-y="2" class="tile"></div>
+        <div data-x="3" data-y="2" class="tile"></div>
+        <div data-x="4" data-y="2" class="tile"></div>
+        <div data-x="5" data-y="2" class="tile"></div>
+        <div data-x="6" data-y="2" class="tile"></div>
+        <div data-x="7" data-y="2" class="tile"></div>
+        <div data-x="8" data-y="2" class="tile"></div>
+        <div data-x="0" data-y="3" class="tile"></div>
+        <div data-x="1" data-y="3" class="tile"></div>
+        <div data-x="2" data-y="3" class="tile"></div>
+        <div data-x="3" data-y="3" class="tile"></div>
+        <div data-x="4" data-y="3" class="tile"></div>
+        <div data-x="5" data-y="3" class="tile"></div>
+        <div data-x="6" data-y="3" class="tile"></div>
+        <div data-x="7" data-y="3" class="tile"></div>
+        <div data-x="8" data-y="3" class="tile"></div>
+        <div data-x="0" data-y="4" class="tile"></div>
+        <div data-x="1" data-y="4" class="tile"></div>
+        <div data-x="2" data-y="4" class="tile"></div>
+        <div data-x="3" data-y="4" class="tile"></div>
+        <div data-x="4" data-y="4" class="tile"></div>
+        <div data-x="5" data-y="4" class="tile"></div>
+        <div data-x="6" data-y="4" class="tile"></div>
+        <div data-x="7" data-y="4" class="tile"></div>
+        <div data-x="8" data-y="4" class="tile"></div>
+        <div data-x="0" data-y="5" class="tile"></div>
+        <div data-x="1" data-y="5" class="tile"></div>
+        <div data-x="2" data-y="5" class="tile"></div>
+        <div data-x="3" data-y="5" class="tile"></div>
+        <div data-x="4" data-y="5" class="tile"></div>
+        <div data-x="5" data-y="5" class="tile"></div>
+        <div data-x="6" data-y="5" class="tile"></div>
+        <div data-x="7" data-y="5" class="tile"></div>
+        <div data-x="8" data-y="5" class="tile"></div>
+        <div data-x="0" data-y="6" class="tile"></div>
+        <div data-x="1" data-y="6" class="tile"></div>
+        <div data-x="2" data-y="6" class="tile"></div>
+        <div data-x="3" data-y="6" class="tile"></div>
+        <div data-x="4" data-y="6" class="tile"></div>
+        <div data-x="5" data-y="6" class="tile"></div>
+        <div data-x="6" data-y="6" class="tile"></div>
+        <div data-x="7" data-y="6" class="tile"></div>
+        <div data-x="8" data-y="6" class="tile"></div>
+        <div data-x="0" data-y="7" class="tile"></div>
+        <div data-x="1" data-y="7" class="tile"></div>
+        <div data-x="2" data-y="7" class="tile"></div>
+        <div data-x="3" data-y="7" class="tile"></div>
+        <div data-x="4" data-y="7" class="tile"></div>
+        <div data-x="5" data-y="7" class="tile"></div>
+        <div data-x="6" data-y="7" class="tile"></div>
+        <div data-x="7" data-y="7" class="tile"></div>
+        <div data-x="8" data-y="7" class="tile"></div>
+        <div data-x="0" data-y="8" class="tile"></div>
+        <div data-x="1" data-y="8" class="tile"></div>
+        <div data-x="2" data-y="8" class="tile"></div>
+        <div data-x="3" data-y="8" class="tile"></div>
+        <div data-x="4" data-y="8" class="tile"></div>
+        <div data-x="5" data-y="8" class="tile"></div>
+        <div data-x="6" data-y="8" class="tile"></div>
+        <div data-x="7" data-y="8" class="tile"></div>
+        <div data-x="8" data-y="8" class="tile"></div>
+      </div>
+      <div id="player0">
+        <div class="hand">
+          <div data-power-card-index="0" class="powerCard"></div>
+          <div data-power-card-index="1" class="powerCard"></div>
+          <div data-power-card-index="2" class="powerCard"></div>
+          <div data-power-card-index="3" class="powerCard"></div>
+          <div data-power-card-index="4" class="powerCard"></div>
+        </div>
+        <div class="statusBar"></div>
+      </div>
+      <div id="globalStatusBar"></div>
+    </main>
   </body>
 </html>
