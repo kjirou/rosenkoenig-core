@@ -513,7 +513,7 @@ export const computeNextPlayerIndex = (gamePlay: GamePlay): PlayerIndex => {
     : togglePlayerIndex(previousPlayerIndex);
 };
 
-const countNumberOfOccupiedTiles = (tileGrid: TileGrid): number => {
+export const countNumberOfOccupiedTiles = (tileGrid: TileGrid): number => {
   return tileGrid.reduce(
     (acc, row) =>
       acc +
@@ -540,29 +540,71 @@ export const calculateScore = (
   tileGrid: TileGrid,
   playerIndex: PlayerIndex
 ): Score => {
-  const occupiedAreas: Score["occupiedAreas"] = [];
+  const allPositions: TileGridPosition[] = [];
   for (const [y, row] of tileGrid.entries()) {
     for (const [x, tile] of row.entries()) {
       if (tile.occupation === playerIndex) {
-        let areExistingAreasAjacent = false;
-        for (const occupiedArea of occupiedAreas) {
-          for (const occupiedTilePosition of occupiedArea) {
-            if (areTilesAdjacent(occupiedTilePosition, [x, y])) {
-              occupiedArea.push([x, y]);
-              areExistingAreasAjacent = true;
-              break;
-            }
-          }
-          if (areExistingAreasAjacent) {
-            break;
-          }
-        }
-        if (!areExistingAreasAjacent) {
-          occupiedAreas.push([[x, y]]);
-        }
+        allPositions.push([x, y]);
       }
     }
   }
+
+  const findConnectedArea = ({
+    connected,
+    rest,
+  }: {
+    connected: TileGridPosition[];
+    rest: TileGridPosition[];
+  }): { connected: TileGridPosition[]; rest: TileGridPosition[] } => {
+    if (connected.length === 0) {
+      throw new Error("connected positions must not be empty");
+    }
+    for (const a of connected) {
+      for (const b of rest) {
+        if (areTilesAdjacent(a, b)) {
+          return findConnectedArea({
+            connected: [...connected, b],
+            rest: rest.filter((p) => p !== b),
+          });
+        }
+      }
+    }
+    return { connected, rest };
+  };
+
+  let restPositions = allPositions;
+  const occupiedAreas: Score["occupiedAreas"] = [];
+  while (restPositions.length > 0) {
+    const { connected, rest } = findConnectedArea({
+      connected: restPositions.slice(0, 1),
+      rest: restPositions.slice(1),
+    });
+    occupiedAreas.push(connected);
+    restPositions = rest;
+  }
+
+  occupiedAreas.forEach((area) => {
+    area
+      .sort((a, b) => {
+        if (a[0] > b[0]) {
+          return 1;
+        } else if (a[0] < b[0]) {
+          return -1;
+        } else {
+          return 0;
+        }
+      })
+      .sort((a, b) => {
+        if (a[1] > b[1]) {
+          return 1;
+        } else if (a[1] < b[1]) {
+          return -1;
+        } else {
+          return 0;
+        }
+      });
+  });
+
   return {
     occupiedAreas,
     total: occupiedAreas.reduce(
