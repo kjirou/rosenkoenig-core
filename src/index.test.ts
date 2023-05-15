@@ -638,6 +638,86 @@ describe("calculateScore", () => {
         ],
       },
     ],
+    [
+      "diagonally connected areas",
+      [
+        createTileGrid({
+          initialOccupation: [
+            "0 0      ",
+            " 0       ",
+            "0 0      ",
+            " 0       ",
+            "         ",
+            "         ",
+            " 0       ",
+            "0 0      ",
+            " 0       ",
+          ].join("\n"),
+        }),
+        0,
+      ],
+      {
+        // 6 * 6 + 4 * 4
+        total: 52,
+        occupiedAreas: [
+          [
+            [0, 0],
+            [2, 0],
+            [1, 1],
+            [0, 2],
+            [2, 2],
+            [1, 3],
+          ],
+          [
+            [1, 6],
+            [0, 7],
+            [2, 7],
+            [1, 8],
+          ],
+        ],
+      },
+    ],
+    [
+      "real complex case",
+      [
+        createTileGrid({
+          initialOccupation: [
+            "    11 00",
+            "    11001",
+            "   110000",
+            "   00 101",
+            "     0011",
+            "      01 ",
+            "       1 ",
+            "     0   ",
+            "         ",
+          ].join("\n"),
+        }),
+        0,
+      ],
+      {
+        total: 197,
+        occupiedAreas: [
+          [
+            [7, 0],
+            [8, 0],
+            [6, 1],
+            [7, 1],
+            [5, 2],
+            [6, 2],
+            [7, 2],
+            [8, 2],
+            [3, 3],
+            [4, 3],
+            [7, 3],
+            [5, 4],
+            [6, 4],
+            [6, 5],
+          ],
+          [[5, 7]],
+        ],
+      },
+    ],
   ])("%s", (_, args, expected) => {
     expect(calculateScore(...args)).toStrictEqual(expected);
   });
