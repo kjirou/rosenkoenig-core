@@ -4,6 +4,14 @@
 
 Core engine of the board game [Rosenkönig](https://de.wikipedia.org/wiki/Rosenk%C3%B6nig)
 
+## :rocket: Installation
+
+This package is ESModules only.
+
+```bash
+npm install rosenkoenig-core
+```
+
 ## :chess_pawn: Usage
 
 This is a set of APIs to implement Rosenkönig.
