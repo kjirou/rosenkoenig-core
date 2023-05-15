@@ -26,6 +26,11 @@
     "url": "https://github.com/kjirou/rosenkoenig-core/issues"
   },
   "homepage": "https://github.com/kjirou/rosenkoenig-core#readme",
+  "files": [
+    "README.md",
+    "dist",
+    "package.json"
+  ],
   "devDependencies": {
     "@types/deep-equal": "^1.0.1",
     "@types/jest": "^29.5.1",
