@@ -565,31 +565,19 @@ describe("calculateScore", () => {
     [
       "multiple contiguous occupied areas",
       [
-        (() => {
-          const tileGrid = createTileGrid();
-          //  012345678
-          // 0xx    x
-          // 1     x
-          // 2
-          // 3   x
-          // 4    x
-          // 5     x  x
-          // 6        x
-          // 7        x
-          // 8        x
-          getTile(tileGrid, [0, 0]).occupation = 0;
-          getTile(tileGrid, [1, 0]).occupation = 0;
-          getTile(tileGrid, [6, 0]).occupation = 0;
-          getTile(tileGrid, [5, 1]).occupation = 0;
-          getTile(tileGrid, [3, 3]).occupation = 0;
-          getTile(tileGrid, [4, 4]).occupation = 0;
-          getTile(tileGrid, [5, 5]).occupation = 0;
-          getTile(tileGrid, [8, 5]).occupation = 0;
-          getTile(tileGrid, [8, 6]).occupation = 0;
-          getTile(tileGrid, [8, 7]).occupation = 0;
-          getTile(tileGrid, [8, 8]).occupation = 0;
-          return tileGrid;
-        })(),
+        createTileGrid({
+          initialOccupation: [
+            "00    0  ",
+            "     0   ",
+            "         ",
+            "   0     ",
+            "    0    ",
+            "     0  0",
+            "        0",
+            "        0",
+            "        0",
+          ].join("\n"),
+        }),
         0,
       ],
       {
@@ -621,21 +609,29 @@ describe("calculateScore", () => {
     [
       "two players' occupied areas are adjacent to each other",
       [
-        (() => {
-          const tileGrid = createTileGrid();
-          getTile(tileGrid, [0, 0]).occupation = 0;
-          getTile(tileGrid, [0, 1]).occupation = 1;
-          getTile(tileGrid, [0, 2]).occupation = 1;
-          return tileGrid;
-        })(),
+        createTileGrid({
+          initialOccupation: [
+            "         ",
+            "         ",
+            "   000   ",
+            "  00100  ",
+            "  01010  ",
+            "  00100  ",
+            "   000   ",
+            "         ",
+            "         ",
+          ].join("\n"),
+        }),
         1,
       ],
       {
-        total: 4,
+        total: 16,
         occupiedAreas: [
           [
-            [0, 1],
-            [0, 2],
+            [4, 3],
+            [3, 4],
+            [5, 4],
+            [4, 5],
           ],
         ],
       },
