@@ -8,18 +8,12 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
-<<<<<<< HEAD
-    "develop": "npm run build && node dist/index.js",
-    "prettier:check": "prettier --check .",
-    "prettier:write": "prettier --write .",
-    "publish-to-npm": "rm -rf ./dist && npm run build && npm publish",
-=======
     "build-into-pages": "npm run build && cp dist/index.js docs/rosenkoenig-core.js",
-    "develop": "ts-node src/index.ts",
+    "develop": "npm run build && node dist/index.js",
+    "publish-to-npm": "rm -rf ./dist && npm run build && npm publish",
     "prettier:check": "prettier --check .",
     "prettier:write": "prettier --write .",
     "serve-pages": "serve ./docs",
->>>>>>> 8320916 (Add npm scripts)
     "test": "jest",
     "typecheck": "tsc"
   },
