@@ -1,6 +1,6 @@
 {
   "name": "rosenkoenig-core",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Core engine of the board game Rosenkönig",
   "exports": "./dist/index.js",
   "main": "./dist/index.js",
