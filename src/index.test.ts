@@ -423,12 +423,8 @@ describe("computeSelectablePlayerActions", () => {
 });
 
 describe("resolvePlayerAction", () => {
-  let game: Game;
-
-  beforeEach(() => {
-    game = createGame(createPowerCardDeck());
-  });
   test("it can draw a power card from the draw pile", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     game.players[playerIndex].powerCardHand = [];
     game.drawPile = [{ direction: "up", numberOfSteps: 2 }];
@@ -445,6 +441,7 @@ describe("resolvePlayerAction", () => {
     ]);
   });
   test("it can draw a power card with reseting the draw/discard pile if the existing draw pile is 0 cards", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     game.players[playerIndex].powerCardHand = [];
     game.drawPile = [];
@@ -469,6 +466,7 @@ describe("resolvePlayerAction", () => {
     expect(game.discardPile).toStrictEqual([]);
   });
   test("it can move the crown and then it discards the power card", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     game.players[playerIndex].powerCardHand = [
       { direction: "up", numberOfSteps: 1 },
@@ -492,6 +490,7 @@ describe("resolvePlayerAction", () => {
     ]);
   });
   test("it reduces the number of knight cards if the crown moves to an already occupied tile", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     const beforeNumberOfKnightCards =
       game.players[playerIndex].numberOfKnightCards;
@@ -517,6 +516,7 @@ describe("resolvePlayerAction", () => {
     );
   });
   test("it does not reduce the number of knight cards if the crown moves to a not occupied tile", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     const beforeNumberOfKnightCards =
       game.players[playerIndex].numberOfKnightCards;
