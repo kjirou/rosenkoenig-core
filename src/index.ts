@@ -106,7 +106,7 @@ export const shuffleArray = <Element>(
   return copied;
 };
 
-const AllDirections = [
+export const AllDirections = [
   "up",
   "down",
   "left",
@@ -117,7 +117,9 @@ const AllDirections = [
   "downRight",
 ] as const satisfies readonly Direction[];
 
-const AllNumberOfSteps = [1, 2, 3] as const satisfies readonly NumberOfSteps[];
+export const AllNumberOfSteps = [
+  1, 2, 3,
+] as const satisfies readonly NumberOfSteps[];
 
 export const createPowerCardDeck = (): PowerCard[] => {
   const drawPile: PowerCard[] = [];
@@ -162,7 +164,7 @@ export const arePlayerActionsEqual = (
   }
 };
 
-const MAX_TILE_GRID_SIZE = 9;
+export const MAX_TILE_GRID_SIZE = 9;
 
 export const createTileGrid = (
   options: { initialOccupation?: string } = {}
@@ -195,7 +197,7 @@ export const createTileGrid = (
   return tileGrid;
 };
 
-const createPlayer = (): Player => {
+export const createPlayer = (): Player => {
   return {
     numberOfKnightCards: 4,
     powerCardHand: [],
@@ -290,7 +292,7 @@ export const canCrownBeMovedToTile = ({
   );
 };
 
-const MAX_NUMBER_OF_POWER_CARDS = 5;
+export const MAX_NUMBER_OF_POWER_CARDS = 5;
 
 export const computeSelectablePlayerActions = ({
   board,
@@ -591,7 +593,7 @@ export const calculateScore = (
   };
 };
 
-const MAX_NUMBER_OF_OCCUPIED_TILES = 52;
+export const MAX_NUMBER_OF_OCCUPIED_TILES = 52;
 
 export const computeWinner = (
   playerAction: PlayerAction,
