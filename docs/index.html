@@ -57,14 +57,6 @@
         playTurn,
       } from "./rosenkoenig-core.js?v=1.0.0";
 
-      const alertWinner = (gamePlay) => {
-        if (gamePlay.winner === 0 || gamePlay.winner === 1) {
-          window.alert(`Player ${gamePlay.winner} won!`);
-        } else if (gamePlay.winner === "draw") {
-          window.alert("Draw!");
-        }
-      };
-
       const renderPlayerElement = (gamePlay, playerIndex, reRender) => {
         const game = gamePlay.game;
         const player = game.players[playerIndex];
@@ -109,7 +101,6 @@
                 powerCardElement.onclick = () => {
                   const newGamePlay = playTurn(gamePlay, moveCrownAction);
                   reRender(newGamePlay);
-                  alertWinner(newGamePlay);
                 };
               } else {
                 powerCardElement.style.cursor = "auto";
@@ -165,7 +156,6 @@
           statusBarElement.onclick = () => {
             const newGamePlay = playTurn(gamePlay, { kind: "pass" });
             reRender(newGamePlay);
-            alertWinner(newGamePlay);
           };
         } else {
           statusBarElement.style.cursor = "auto";
@@ -199,15 +189,20 @@
         }
       };
 
-      const renderGlobalStatusBarElement = (game) => {
+      const renderGlobalStatusBarElement = (gamePlay) => {
         const globalStatusBarElement =
           document.querySelector("#globalStatusBar");
 
         const numberOfOccupiedTiles = countNumberOfOccupiedTiles(
-          game.board.tileGrid
+          gamePlay.game.board.tileGrid
         );
         const statusItems = [
           `Remaining pieces: ${52 - numberOfOccupiedTiles}/52`,
+          ...(gamePlay.winner === undefined
+            ? []
+            : gamePlay.winner === "draw"
+            ? ["Draw!"]
+            : [`Player ${gamePlay.winner} won!`]),
         ];
         globalStatusBarElement.textContent = statusItems.join(" | ");
       };
@@ -216,7 +211,7 @@
         renderBoardElement(gamePlay.game);
         renderPlayerElement(gamePlay, 0, render);
         renderPlayerElement(gamePlay, 1, render);
-        renderGlobalStatusBarElement(gamePlay.game);
+        renderGlobalStatusBarElement(gamePlay);
       };
 
       window.addEventListener("DOMContentLoaded", () => {
