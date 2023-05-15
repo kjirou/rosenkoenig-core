@@ -168,7 +168,7 @@ describe("isTileGridPositionValid", () => {
     { args: [createTileGrid(), [9, 0]], expected: false },
     { args: [createTileGrid(), [0, 9]], expected: false },
   ])("$args.1 => $expected", ({ args, expected }) => {
-    expect(isTileGridPositionValid(...args)).toEqual(expected);
+    expect(isTileGridPositionValid(...args)).toBe(expected);
   });
 });
 
@@ -209,7 +209,9 @@ describe("translateTileGridPositionByPowerCard", () => {
       [-3, 0],
     ],
   ])("%s", (_, args, expected) => {
-    expect(translateTileGridPositionByPowerCard(...args)).toEqual(expected);
+    expect(translateTileGridPositionByPowerCard(...args)).toStrictEqual(
+      expected
+    );
   });
 });
 
@@ -235,7 +237,7 @@ describe("canCrownBeMovedToTile", () => {
           tileGrid: createTileGrid(),
         },
       ],
-      { canBeMoved: false, isKnightCardNecessary: false },
+      false,
     ],
     [
       "the crown can move when the tile is empty",
@@ -251,7 +253,7 @@ describe("canCrownBeMovedToTile", () => {
           tileGrid: createTileGrid(),
         },
       ],
-      { canBeMoved: true, isKnightCardNecessary: false },
+      true,
     ],
     [
       "the crown can not move when the tile is occupied by the same player",
@@ -271,7 +273,7 @@ describe("canCrownBeMovedToTile", () => {
           })(),
         },
       ],
-      { canBeMoved: false, isKnightCardNecessary: false },
+      false,
     ],
     [
       "the crown can not move when the tile is occupied by the another player and the player does not have a knight card",
@@ -291,7 +293,7 @@ describe("canCrownBeMovedToTile", () => {
           })(),
         },
       ],
-      { canBeMoved: false, isKnightCardNecessary: true },
+      false,
     ],
     [
       "the crown can move when the tile is occupied by the another player and the player has a knight card",
@@ -311,7 +313,7 @@ describe("canCrownBeMovedToTile", () => {
           })(),
         },
       ],
-      { canBeMoved: true, isKnightCardNecessary: true },
+      true,
     ],
   ])("%s", (_, args, expected) => {
     expect(canCrownBeMovedToTile(...args)).toStrictEqual(expected);
@@ -421,12 +423,8 @@ describe("computeSelectablePlayerActions", () => {
 });
 
 describe("resolvePlayerAction", () => {
-  let game: Game;
-
-  beforeEach(() => {
-    game = createGame(createPowerCardDeck());
-  });
   test("it can draw a power card from the draw pile", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     game.players[playerIndex].powerCardHand = [];
     game.drawPile = [{ direction: "up", numberOfSteps: 2 }];
@@ -443,6 +441,7 @@ describe("resolvePlayerAction", () => {
     ]);
   });
   test("it can draw a power card with reseting the draw/discard pile if the existing draw pile is 0 cards", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     game.players[playerIndex].powerCardHand = [];
     game.drawPile = [];
@@ -467,6 +466,7 @@ describe("resolvePlayerAction", () => {
     expect(game.discardPile).toStrictEqual([]);
   });
   test("it can move the crown and then it discards the power card", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     game.players[playerIndex].powerCardHand = [
       { direction: "up", numberOfSteps: 1 },
@@ -490,6 +490,7 @@ describe("resolvePlayerAction", () => {
     ]);
   });
   test("it reduces the number of knight cards if the crown moves to an already occupied tile", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     const beforeNumberOfKnightCards =
       game.players[playerIndex].numberOfKnightCards;
@@ -515,6 +516,7 @@ describe("resolvePlayerAction", () => {
     );
   });
   test("it does not reduce the number of knight cards if the crown moves to a not occupied tile", () => {
+    let game = createGame(createPowerCardDeck());
     const playerIndex = 0;
     const beforeNumberOfKnightCards =
       game.players[playerIndex].numberOfKnightCards;
@@ -563,31 +565,19 @@ describe("calculateScore", () => {
     [
       "multiple contiguous occupied areas",
       [
-        (() => {
-          const tileGrid = createTileGrid();
-          //  012345678
-          // 0xx    x
-          // 1     x
-          // 2
-          // 3   x
-          // 4    x
-          // 5     x  x
-          // 6        x
-          // 7        x
-          // 8        x
-          getTile(tileGrid, [0, 0]).occupation = 0;
-          getTile(tileGrid, [1, 0]).occupation = 0;
-          getTile(tileGrid, [6, 0]).occupation = 0;
-          getTile(tileGrid, [5, 1]).occupation = 0;
-          getTile(tileGrid, [3, 3]).occupation = 0;
-          getTile(tileGrid, [4, 4]).occupation = 0;
-          getTile(tileGrid, [5, 5]).occupation = 0;
-          getTile(tileGrid, [8, 5]).occupation = 0;
-          getTile(tileGrid, [8, 6]).occupation = 0;
-          getTile(tileGrid, [8, 7]).occupation = 0;
-          getTile(tileGrid, [8, 8]).occupation = 0;
-          return tileGrid;
-        })(),
+        createTileGrid({
+          initialOccupation: [
+            "00    0  ",
+            "     0   ",
+            "         ",
+            "   0     ",
+            "    0    ",
+            "     0  0",
+            "        0",
+            "        0",
+            "        0",
+          ].join("\n"),
+        }),
         0,
       ],
       {
@@ -619,21 +609,29 @@ describe("calculateScore", () => {
     [
       "two players' occupied areas are adjacent to each other",
       [
-        (() => {
-          const tileGrid = createTileGrid();
-          getTile(tileGrid, [0, 0]).occupation = 0;
-          getTile(tileGrid, [0, 1]).occupation = 1;
-          getTile(tileGrid, [0, 2]).occupation = 1;
-          return tileGrid;
-        })(),
+        createTileGrid({
+          initialOccupation: [
+            "         ",
+            "         ",
+            "   000   ",
+            "  00100  ",
+            "  01010  ",
+            "  00100  ",
+            "   000   ",
+            "         ",
+            "         ",
+          ].join("\n"),
+        }),
         1,
       ],
       {
-        total: 4,
+        total: 16,
         occupiedAreas: [
           [
-            [0, 1],
-            [0, 2],
+            [4, 3],
+            [3, 4],
+            [5, 4],
+            [4, 5],
           ],
         ],
       },
