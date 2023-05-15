@@ -11,6 +11,7 @@
     "develop": "npm run build && node dist/index.js",
     "prettier:check": "prettier --check .",
     "prettier:write": "prettier --write .",
+    "publish-to-npm": "rm -rf ./dist && npm run build && npm publish",
     "test": "jest",
     "typecheck": "tsc"
   },
