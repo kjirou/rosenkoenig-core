@@ -164,23 +164,6 @@ export const arePlayerActionsEqual = (
 
 const MAX_TILE_GRID_SIZE = 9;
 
-const createTileGridWithOccupation = (occupitionQuery: string): TileGrid => {
-  const lines = occupitionQuery.split("\n");
-  if (lines.length !== 9) throw new Error("invalid query");
-  const tileGrid = createTileGrid();
-  for (const [y, row] of tileGrid.entries()) {
-    const line = lines[y];
-    const characters = line.split("");
-    if (characters.length !== 9) throw new Error("invalid a line of query");
-    for (const [x, tile] of row.entries()) {
-      const character = characters[x];
-      tile.occupation =
-        character === "0" ? 0 : character === "1" ? 1 : undefined;
-    }
-  }
-  return tileGrid;
-};
-
 export const createTileGrid = (
   options: { initialOccupation?: string } = {}
 ): TileGrid => {
