@@ -168,7 +168,7 @@ describe("isTileGridPositionValid", () => {
     { args: [createTileGrid(), [9, 0]], expected: false },
     { args: [createTileGrid(), [0, 9]], expected: false },
   ])("$args.1 => $expected", ({ args, expected }) => {
-    expect(isTileGridPositionValid(...args)).toEqual(expected);
+    expect(isTileGridPositionValid(...args)).toBe(expected);
   });
 });
 
@@ -209,7 +209,9 @@ describe("translateTileGridPositionByPowerCard", () => {
       [-3, 0],
     ],
   ])("%s", (_, args, expected) => {
-    expect(translateTileGridPositionByPowerCard(...args)).toEqual(expected);
+    expect(translateTileGridPositionByPowerCard(...args)).toStrictEqual(
+      expected
+    );
   });
 });
 
