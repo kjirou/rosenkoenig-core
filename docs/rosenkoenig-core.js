@@ -297,10 +297,11 @@ export const countNumberOfOccupiedTiles = (tileGrid) => {
     return tileGrid.reduce((acc, row) => acc +
         row.reduce((acc2, tile) => acc2 + (tile.occupation === undefined ? 0 : 1), 0), 0);
 };
-const areTilesAdjacent = (a, b) => {
-    return (Math.abs(a[0] - b[0]) <= 1 &&
-        Math.abs(a[1] - b[1]) <= 1 &&
-        !(a[0] === b[0] && a[1] === b[1]));
+const areTilesConnected = (a, b) => {
+    return ((a[0] === b[0] && a[1] === b[1] - 1) ||
+        (a[0] === b[0] && a[1] === b[1] + 1) ||
+        (a[0] === b[0] - 1 && a[1] === b[1]) ||
+        (a[0] === b[0] + 1 && a[1] === b[1]));
 };
 export const calculateScore = (tileGrid, playerIndex) => {
     const allPositions = [];
@@ -317,7 +318,7 @@ export const calculateScore = (tileGrid, playerIndex) => {
         }
         for (const a of connected) {
             for (const b of rest) {
-                if (areTilesAdjacent(a, b)) {
+                if (areTilesConnected(a, b)) {
                     return findConnectedArea({
                         connected: [...connected, b],
                         rest: rest.filter((p) => p !== b),
