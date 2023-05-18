@@ -504,14 +504,15 @@ export const countNumberOfOccupiedTiles = (tileGrid: TileGrid): number => {
   );
 };
 
-const areTilesAdjacent = (
+const areTilesConnected = (
   a: TileGridPosition,
   b: TileGridPosition
 ): boolean => {
   return (
-    Math.abs(a[0] - b[0]) <= 1 &&
-    Math.abs(a[1] - b[1]) <= 1 &&
-    !(a[0] === b[0] && a[1] === b[1])
+    (a[0] === b[0] && a[1] === b[1] - 1) ||
+    (a[0] === b[0] && a[1] === b[1] + 1) ||
+    (a[0] === b[0] - 1 && a[1] === b[1]) ||
+    (a[0] === b[0] + 1 && a[1] === b[1])
   );
 };
 
@@ -540,7 +541,7 @@ export const calculateScore = (
     }
     for (const a of connected) {
       for (const b of rest) {
-        if (areTilesAdjacent(a, b)) {
+        if (areTilesConnected(a, b)) {
           return findConnectedArea({
             connected: [...connected, b],
             rest: rest.filter((p) => p !== b),
