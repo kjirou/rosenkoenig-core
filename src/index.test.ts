@@ -563,45 +563,74 @@ describe("calculateScore", () => {
       { total: 1, occupiedAreas: [[[0, 1]]] },
     ],
     [
-      "multiple contiguous occupied areas",
+      "vertical-horizontal-diagonal connections",
       [
         createTileGrid({
           initialOccupation: [
-            "00    0  ",
-            "     0   ",
+            "00       ",
+            "  0      ",
+            "  0      ",
             "         ",
-            "   0     ",
-            "    0    ",
-            "     0  0",
-            "        0",
-            "        0",
-            "        0",
+            "         ",
+            "         ",
+            "         ",
+            "         ",
+            "         ",
           ].join("\n"),
         }),
         0,
       ],
       {
-        // 4 + 4 + 9 + 16 = 33
-        total: 33,
+        total: 8,
         occupiedAreas: [
           [
             [0, 0],
             [1, 0],
           ],
           [
-            [6, 0],
-            [5, 1],
+            [2, 1],
+            [2, 2],
+          ],
+        ],
+      },
+    ],
+    [
+      "multiple contiguous occupied areas",
+      [
+        createTileGrid({
+          initialOccupation: [
+            "00       ",
+            "         ",
+            "         ",
+            "    0    ",
+            "   000   ",
+            "    0   0",
+            "        0",
+            "        0",
+            "         ",
+          ].join("\n"),
+        }),
+        0,
+      ],
+      {
+        // 4 + 25 + 9 = 38
+        total: 38,
+        occupiedAreas: [
+          [
+            [0, 0],
+            [1, 0],
           ],
           [
-            [3, 3],
+            [4, 3],
+            [3, 4],
             [4, 4],
-            [5, 5],
+            [5, 4],
+            [4, 5],
           ],
           [
             [8, 5],
             [8, 6],
             [8, 7],
-            [8, 8],
           ],
         ],
       },
@@ -625,54 +654,8 @@ describe("calculateScore", () => {
         1,
       ],
       {
-        total: 16,
-        occupiedAreas: [
-          [
-            [4, 3],
-            [3, 4],
-            [5, 4],
-            [4, 5],
-          ],
-        ],
-      },
-    ],
-    [
-      "diagonally connected areas",
-      [
-        createTileGrid({
-          initialOccupation: [
-            "0 0      ",
-            " 0       ",
-            "0 0      ",
-            " 0       ",
-            "         ",
-            "         ",
-            " 0       ",
-            "0 0      ",
-            " 0       ",
-          ].join("\n"),
-        }),
-        0,
-      ],
-      {
-        // 6 * 6 + 4 * 4
-        total: 52,
-        occupiedAreas: [
-          [
-            [0, 0],
-            [2, 0],
-            [1, 1],
-            [0, 2],
-            [2, 2],
-            [1, 3],
-          ],
-          [
-            [1, 6],
-            [0, 7],
-            [2, 7],
-            [1, 8],
-          ],
-        ],
+        total: 4,
+        occupiedAreas: [[[4, 3]], [[3, 4]], [[5, 4]], [[4, 5]]],
       },
     ],
     [
@@ -694,7 +677,7 @@ describe("calculateScore", () => {
         0,
       ],
       {
-        total: 197,
+        total: 95,
         occupiedAreas: [
           [
             [7, 0],
@@ -705,9 +688,13 @@ describe("calculateScore", () => {
             [6, 2],
             [7, 2],
             [8, 2],
+            [7, 3],
+          ],
+          [
             [3, 3],
             [4, 3],
-            [7, 3],
+          ],
+          [
             [5, 4],
             [6, 4],
             [6, 5],
